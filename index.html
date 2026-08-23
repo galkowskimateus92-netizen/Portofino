@@ -253,6 +253,15 @@
   <input name="bot-field" />
 </form>
 
+<!-- Formulário oculto separado: só recebe registros quando o webhook confirma pagamento aprovado -->
+<form name="pagamentos-confirmados" data-netlify="true" hidden>
+  <input type="text" name="pedido" />
+  <input type="text" name="status" />
+  <input type="text" name="valor" />
+  <input type="text" name="pagador_email" />
+  <input type="text" name="payment_id" />
+</form>
+
 <div class="announce">FRETE GRÁTIS ACIMA DE R$ 250 · ENVIO PARA TODO O BRASIL</div>
 
 <header>
