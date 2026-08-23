@@ -16,7 +16,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { items } = JSON.parse(event.body || '{}');
+    const { items, external_reference, payer } = JSON.parse(event.body || '{}');
     if (!Array.isArray(items) || items.length === 0) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Carrinho vazio.' }) };
     }
@@ -37,6 +37,18 @@ exports.handler = async (event) => {
       },
       auto_return: 'approved',
     };
+
+    // Número do pedido (pra bater com o registro do formulário de entrega)
+    if (external_reference) {
+      preferenceBody.external_reference = external_reference;
+    }
+    // Nome/e-mail do comprador, se enviados
+    if (payer && (payer.name || payer.email)) {
+      preferenceBody.payer = {
+        name: payer.name || undefined,
+        email: payer.email || undefined,
+      };
+    }
 
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
