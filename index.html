@@ -234,6 +234,25 @@
 </head>
 <body>
 
+<!-- Formulário oculto para o Netlify Forms reconhecer e salvar os pedidos -->
+<form name="pedidos" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="text" name="pedido" />
+  <input type="text" name="nome" />
+  <input type="text" name="cpf" />
+  <input type="email" name="email" />
+  <input type="text" name="telefone" />
+  <input type="text" name="cep" />
+  <input type="text" name="endereco" />
+  <input type="text" name="numero" />
+  <input type="text" name="complemento" />
+  <input type="text" name="bairro" />
+  <input type="text" name="cidade" />
+  <input type="text" name="estado" />
+  <input type="text" name="itens" />
+  <input type="text" name="total" />
+  <input name="bot-field" />
+</form>
+
 <div class="announce">FRETE GRÁTIS ACIMA DE R$ 250 · ENVIO PARA TODO O BRASIL</div>
 
 <header>
@@ -489,7 +508,7 @@
   document.getElementById('drawerClose').onclick = closeDrawer;
   overlay.onclick = () => { closeDrawer(); closeModal(); };
 
-  // Checkout real via Mercado Pago (Checkout Pro), através da função serverless
+  // Checkout: primeiro coleta o endereço de entrega, depois manda pro pagamento
   const modalOverlay = document.getElementById('modalOverlay');
   const modalContent = document.getElementById('modalContent');
   const checkoutBtn = document.getElementById('checkoutBtn');
@@ -500,8 +519,98 @@
   }
   function closeModal(){ modalOverlay.classList.remove('show'); }
 
-  async function startCheckout(){
+  function openShippingModal(){
     if(cart.length === 0) return;
+    const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
+    modalContent.innerHTML = `
+      <h3>DADOS PARA ENTREGA</h3>
+      <p class="small">Subtotal: ${formatPrice(subtotal)}</p>
+      <form id="shippingForm">
+        <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" required></div>
+        <div class="field"><label>CPF</label><input type="text" name="cpf" required></div>
+        <div class="field"><label>E-MAIL</label><input type="email" name="email" required></div>
+        <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" required></div>
+        <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInput" placeholder="00000-000" required></div>
+        <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInput" required></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" required></div>
+          <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento"></div>
+        </div>
+        <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInput" required></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" required></div>
+          <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" required></div>
+        </div>
+        <button type="submit" class="btn" style="width:100%; margin-top:8px;">IR PARA O PAGAMENTO</button>
+      </form>
+    `;
+    modalOverlay.classList.add('show');
+    document.getElementById('cepInput').addEventListener('blur', lookupCep);
+    document.getElementById('shippingForm').onsubmit = handleShippingSubmit;
+  }
+
+  // Busca o endereço automaticamente a partir do CEP (API pública ViaCEP)
+  async function lookupCep(e){
+    const cep = e.target.value.replace(/\D/g,'');
+    if(cep.length !== 8) return;
+    try{
+      const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await resp.json();
+      if(!data.erro){
+        document.getElementById('enderecoInput').value = data.logradouro || '';
+        document.getElementById('bairroInput').value = data.bairro || '';
+        document.getElementById('cidadeInput').value = data.localidade || '';
+        document.getElementById('estadoInput').value = data.uf || '';
+      }
+    }catch(err){ /* se a busca falhar, o cliente preenche na mão mesmo */ }
+  }
+
+  async function handleShippingSubmit(e){
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'ENVIANDO...';
+
+    const orderNumber = 'PTF-' + Math.floor(10000 + Math.random()*89999);
+    const fd = new FormData(form);
+    const payer = { name: fd.get('nome'), email: fd.get('email') };
+    const itemsDesc = cart.map(i => `${i.qty}x ${i.name}`).join(', ');
+    const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
+
+    // Salva o pedido + endereço no Netlify Forms (você recebe por e-mail / vê no painel)
+    const body = new URLSearchParams({
+      'form-name':'pedidos',
+      pedido: orderNumber,
+      nome: fd.get('nome'),
+      cpf: fd.get('cpf'),
+      email: fd.get('email'),
+      telefone: fd.get('telefone'),
+      cep: fd.get('cep'),
+      endereco: fd.get('endereco'),
+      numero: fd.get('numero'),
+      complemento: fd.get('complemento') || '',
+      bairro: fd.get('bairro'),
+      cidade: fd.get('cidade'),
+      estado: fd.get('estado'),
+      itens: itemsDesc,
+      total: formatPrice(subtotal)
+    });
+
+    try{
+      await fetch('/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body: body.toString()
+      });
+    }catch(err){
+      // mesmo que o registro falhe, seguimos pro pagamento — não trava a venda
+    }
+
+    startCheckout(orderNumber, payer);
+  }
+
+  async function startCheckout(orderNumber, payer){
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
     try{
@@ -509,7 +618,9 @@
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({
-          items: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price }))
+          items: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
+          external_reference: orderNumber,
+          payer: payer
         })
       });
       const data = await resp.json();
@@ -533,7 +644,7 @@
     }
   }
 
-  checkoutBtn.onclick = startCheckout;
+  checkoutBtn.onclick = openShippingModal;
   document.getElementById('modalClose').onclick = closeModal;
 
   renderProducts();

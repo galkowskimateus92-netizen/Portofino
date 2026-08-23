@@ -20,8 +20,16 @@
   <div class="box">
     <div class="anchor">⚓</div>
     <h1>PEDIDO CONFIRMADO</h1>
-    <p>Obrigado por escolher a Portofino. Você vai receber um e-mail com os detalhes do pedido em breve.</p>
+    <p id="orderMsg">Obrigado por escolher a Portofino. Você vai receber um e-mail com os detalhes do pedido em breve.</p>
     <a href="/">VOLTAR PARA A LOJA</a>
   </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('external_reference');
+    if(ref){
+      document.getElementById('orderMsg').innerHTML =
+        'Pedido <strong>' + ref + '</strong> confirmado. Você vai receber um e-mail com os detalhes em breve.';
+    }
+  </script>
 </body>
 </html>
