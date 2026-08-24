@@ -133,8 +133,8 @@
   /* ABOUT */
   .about{ display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
   .about-art{ height:340px; border-radius:0 170px 0 170px;
-    background: radial-gradient(circle at 30% 30%, #2a4a3c, #16281f 70%); position:relative; }
-  .about-art .emblem-wrap{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+    background:#F6F4EE; position:relative; overflow:hidden; }
+  .about-art img{ width:100%; height:100%; object-fit:cover; object-position:center; }
   .about-text .eyebrow{ margin-bottom:14px; }
   .about-text h2{ font-family:'Cinzel',serif; font-size:30px; letter-spacing:3px; margin-bottom:20px; }
   .about-text p{ font-size:14px; line-height:1.9; opacity:0.8; margin-bottom:16px; }
@@ -302,15 +302,7 @@
 
 <section class="about" id="sobre" style="max-width:1180px; margin:0 auto; padding:70px 28px;">
   <div class="about-art">
-    <div class="emblem-wrap">
-      <svg width="140" height="70" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg">
-        <polyline points="5,60 20,35 35,55 50,25 65,50 80,20 95,48 110,30 125,55 145,45"
-          fill="none" stroke="#CDBA9A" stroke-width="2"/>
-        <circle cx="80" cy="15" r="6" fill="#CDBA9A"/>
-        <line x1="80" y1="20" x2="80" y2="45" stroke="#CDBA9A" stroke-width="2"/>
-      </svg>
-      <div style="font-family:'Cinzel',serif; letter-spacing:6px; color:#CDBA9A; font-size:20px; margin-top:14px;">PORTOFINO</div>
-    </div>
+    <img src="portofino-logo-pf.jpg" alt="Logo Portofino">
   </div>
   <div class="about-text">
     <div class="eyebrow">DESDE 2026</div>
