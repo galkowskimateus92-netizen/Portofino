@@ -71,6 +71,15 @@
     min-width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   }
   .burger{ display:none; background:none; border:none; font-size:22px; cursor:pointer; color:var(--navy); }
+  .mobile-menu{
+    display:none; flex-direction:column; overflow:hidden; max-height:0;
+    background:var(--cream); border-top:1px solid var(--line); transition:max-height .3s ease;
+  }
+  .mobile-menu.show{ max-height:220px; }
+  .mobile-menu a{
+    padding:16px 28px; font-size:13px; letter-spacing:1.5px; font-weight:600;
+    border-bottom:1px solid var(--line); color:var(--navy);
+  }
 
   /* HERO */
   .hero{
@@ -212,6 +221,7 @@
   @media(max-width:900px){
     .nav-links{ display:none; }
     .burger{ display:block; }
+    .mobile-menu{ display:flex; }
     .hero{ grid-template-columns:1fr; padding:30px 0; }
     .hero-side{ display:none; }
     .hero-center h1{ font-size:38px; letter-spacing:5px; }
@@ -260,7 +270,7 @@
 
 <header>
   <div class="nav">
-    <button class="burger">☰</button>
+    <button class="burger" id="burgerBtn">☰</button>
     <div class="logo">
       <div class="name">PORTOFINO</div>
       <div class="sub">ITALIAN RIVIERA</div>
@@ -275,6 +285,11 @@
         ⚓ CARRINHO <span class="cart-count" id="cartCount">0</span>
       </button>
     </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#colecao">Coleção</a>
+    <a href="#sobre">Sobre</a>
+    <a href="#contato">Contato</a>
   </div>
 </header>
 
@@ -394,6 +409,20 @@
 </div>
 
 <script>
+  // Menu mobile
+  const burgerBtn = document.getElementById('burgerBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  burgerBtn.onclick = () => {
+    mobileMenu.classList.toggle('show');
+    burgerBtn.textContent = mobileMenu.classList.contains('show') ? '✕' : '☰';
+  };
+  mobileMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu.classList.remove('show');
+      burgerBtn.textContent = '☰';
+    });
+  });
+
   const products = [
     { id:1, name:"Classic Navy", desc:"Algodão premium · âncora bordada", price:149.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
     { id:2, name:"Riviera Green", desc:"Algodão premium · âncora bordada", price:149.90, color:"#1B3D2D", brim:"#132a20", patch:"#CDBA9A" },
