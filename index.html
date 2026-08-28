@@ -6,6 +6,7 @@
 <title>Portofino — Bonés Italian Riviera</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,500&family=Cinzel:wght@400;500;600&family=Montserrat:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --cream:#F6F4EE;
@@ -71,15 +72,6 @@
     min-width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   }
   .burger{ display:none; background:none; border:none; font-size:22px; cursor:pointer; color:var(--navy); }
-  .mobile-menu{
-    display:none; flex-direction:column; overflow:hidden; max-height:0;
-    background:var(--cream); border-top:1px solid var(--line); transition:max-height .3s ease;
-  }
-  .mobile-menu.show{ max-height:220px; }
-  .mobile-menu a{
-    padding:16px 28px; font-size:13px; letter-spacing:1.5px; font-weight:600;
-    border-bottom:1px solid var(--line); color:var(--navy);
-  }
 
   /* HERO */
   .hero{
@@ -138,6 +130,9 @@
   }
   .add-btn:hover{ background:var(--gold); }
   .add-btn.added{ background:var(--green); }
+  .add-btn.esgotado{ background:#999; cursor:not-allowed; opacity:0.7; }
+  .card.esgotado-card{ opacity:0.6; }
+  .stock-warn{ font-size:10px; color:var(--wine); margin-top:6px; letter-spacing:0.5px; }
 
   /* ABOUT */
   .about{ display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
@@ -221,7 +216,6 @@
   @media(max-width:900px){
     .nav-links{ display:none; }
     .burger{ display:block; }
-    .mobile-menu{ display:flex; }
     .hero{ grid-template-columns:1fr; padding:30px 0; }
     .hero-side{ display:none; }
     .hero-center h1{ font-size:38px; letter-spacing:5px; }
@@ -270,7 +264,7 @@
 
 <header>
   <div class="nav">
-    <button class="burger" id="burgerBtn">☰</button>
+    <button class="burger">☰</button>
     <div class="logo">
       <div class="name">PORTOFINO</div>
       <div class="sub">ITALIAN RIVIERA</div>
@@ -285,11 +279,6 @@
         ⚓ CARRINHO <span class="cart-count" id="cartCount">0</span>
       </button>
     </div>
-  </div>
-  <div class="mobile-menu" id="mobileMenu">
-    <a href="#colecao">Coleção</a>
-    <a href="#sobre">Sobre</a>
-    <a href="#contato">Contato</a>
   </div>
 </header>
 
@@ -375,17 +364,10 @@
         <ul><li><a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a></li></ul>
       </div>
     </div>
-    <div class="foot-bottom" style="flex-direction:column; align-items:flex-start; gap:10px;">
-      <div style="display:flex; justify-content:space-between; width:100%; flex-wrap:wrap; gap:10px;">
-        <span>© 2026 PORTOFINO — Todos os direitos reservados</span>
-        <div class="foot-pillars">
-          <span>⚓ ITALY</span><span>⛵ FREEDOM</span><span>🌳 ELEGANCE</span><span>🚗 TIMELESS</span>
-        </div>
-      </div>
-      <div style="font-size:10.5px; opacity:0.55; line-height:1.6;">
-        Marco Antonio Galkowski — CPF 827.758.009-63 — Rua Honorio Zchoerpers, 158, Centro, São Bento do Sul/SC, CEP 89280-529
-        &nbsp;·&nbsp; <a href="/privacidade.html" style="text-decoration:underline;">Política de Privacidade</a>
-        &nbsp;·&nbsp; <a href="/termos.html" style="text-decoration:underline;">Termos de Uso</a>
+    <div class="foot-bottom">
+      <span>© 2026 PORTOFINO — Todos os direitos reservados</span>
+      <div class="foot-pillars">
+        <span>⚓ ITALY</span><span>⛵ FREEDOM</span><span>🌳 ELEGANCE</span><span>🚗 TIMELESS</span>
       </div>
     </div>
   </div>
@@ -416,19 +398,10 @@
 </div>
 
 <script>
-  // Menu mobile
-  const burgerBtn = document.getElementById('burgerBtn');
-  const mobileMenu = document.getElementById('mobileMenu');
-  burgerBtn.onclick = () => {
-    mobileMenu.classList.toggle('show');
-    burgerBtn.textContent = mobileMenu.classList.contains('show') ? '✕' : '☰';
-  };
-  mobileMenu.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      mobileMenu.classList.remove('show');
-      burgerBtn.textContent = '☰';
-    });
-  });
+  // Conexão com o Supabase (banco onde fica o estoque)
+  const SUPABASE_URL = 'https://mfopdrdmthrztygsimex.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_SwOUdKjJtuNWmsZMZLgQag_EbxZr9xf';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
     { id:1, name:"Classic Navy", desc:"Algodão premium · âncora bordada", price:149.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
@@ -438,6 +411,26 @@
     { id:5, name:"Anchor Rope", desc:"Detalhe em corda dourada", price:169.90, color:"#0D1B2A", brim:"#081420", patch:"#B08A4E", rope:true },
     { id:6, name:"Coastal White", desc:"Algodão leve · verão", price:139.90, color:"#F2EFE6", brim:"#ddd6c4", patch:"#0D1B2A" },
   ];
+
+  // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
+  // assume-se disponível (null = "ainda não sei"), pra não travar a loja
+  // se o Supabase estiver fora do ar.
+  const estoquePorId = {};
+
+  async function carregarEstoque(){
+    try{
+      const { data, error } = await supabaseClient.from('produtos').select('id, estoque');
+      if(error) throw error;
+      data.forEach(row => { estoquePorId[row.id] = row.estoque; });
+    }catch(err){
+      console.error('Não foi possível carregar o estoque do Supabase:', err);
+    }
+    renderProducts();
+  }
+
+  function estoqueDe(id){
+    return estoquePorId.hasOwnProperty(id) ? estoquePorId[id] : null; // null = desconhecido, trata como disponível
+  }
 
   let cart = [];
 
@@ -457,19 +450,34 @@
 
   function renderProducts(){
     const grid = document.getElementById('productGrid');
-    grid.innerHTML = products.map(p => `
-      <div class="card">
+    grid.innerHTML = products.map(p => {
+      const estoque = estoqueDe(p.id);
+      const esgotado = estoque !== null && estoque <= 0;
+      const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
+      return `
+      <div class="card ${esgotado ? 'esgotado-card' : ''}">
         ${capSVG(p, 150)}
         <h3>${p.name.toUpperCase()}</h3>
         <div class="desc">${p.desc}</div>
         <div class="price">${formatPrice(p.price)}</div>
-        <button class="add-btn" onclick="addToCart(${p.id}, this)">ADICIONAR AO CARRINHO</button>
+        ${estoqueBaixo ? `<div class="stock-warn">Últimas ${estoque} unidades</div>` : ''}
+        <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="addToCart(${p.id}, this)">${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function addToCart(id, btn){
+    const estoque = estoqueDe(id);
     const existing = cart.find(i => i.id === id);
+    const qtyNoCarrinho = existing ? existing.qty : 0;
+    if(estoque !== null && qtyNoCarrinho + 1 > estoque){
+      if(btn){
+        btn.textContent = "SEM ESTOQUE SUFICIENTE";
+        setTimeout(()=>{ btn.textContent = "ADICIONAR AO CARRINHO"; }, 1500);
+      }
+      return;
+    }
     if(existing){ existing.qty++; } else {
       const p = products.find(p => p.id === id);
       cart.push({ ...p, qty:1 });
@@ -685,7 +693,7 @@
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
     try{
-      const items = cart.map(i => ({ name:i.name, qty:i.qty, price:i.price }));
+      const items = cart.map(i => ({ productId:i.id, name:i.name, qty:i.qty, price:i.price }));
       if(frete > 0){
         items.push({ name:'Frete', qty:1, price:frete });
       }
@@ -722,7 +730,7 @@
   checkoutBtn.onclick = openShippingModal;
   document.getElementById('modalClose').onclick = closeModal;
 
-  renderProducts();
+  carregarEstoque();
   renderCart();
 </script>
 
