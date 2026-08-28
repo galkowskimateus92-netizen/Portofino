@@ -123,7 +123,8 @@
   .card .cap{ margin-bottom:22px; }
   .card h3{ font-family:'Cinzel',serif; font-size:15px; letter-spacing:2px; }
   .card .desc{ font-size:11px; opacity:0.6; margin-top:6px; letter-spacing:0.3px; }
-  .card .price{ font-family:'Montserrat',sans-serif; font-weight:600; font-size:16px; margin:16px 0 18px; }
+  .card .price{ font-family:'Montserrat',sans-serif; font-weight:600; font-size:16px; margin:16px 0 4px; }
+  .installment{ font-size:10.5px; opacity:0.55; margin-bottom:14px; }
   .add-btn{
     width:100%; background:var(--navy); color:var(--cream); border:none; padding:12px;
     font-size:10.5px; letter-spacing:2px; font-weight:600; cursor:pointer; border-radius:var(--radius); transition:.2s;
@@ -133,6 +134,53 @@
   .add-btn.esgotado{ background:#999; cursor:not-allowed; opacity:0.7; }
   .card.esgotado-card{ opacity:0.6; }
   .stock-warn{ font-size:10px; color:var(--wine); margin-top:6px; letter-spacing:0.5px; }
+
+  /* PRODUCT PAGE */
+  .product-page{ padding:36px 0 70px; }
+  .pp-back{
+    background:none; border:none; cursor:pointer; font-size:11px; letter-spacing:1.5px;
+    font-weight:600; color:var(--navy); opacity:0.7; margin-bottom:28px; padding:0;
+    font-family:'Montserrat',sans-serif;
+  }
+  .pp-back:hover{ opacity:1; }
+  .pp-layout{ display:flex; gap:60px; align-items:flex-start; }
+  .pp-gallery{
+    flex:1 1 50%; background:var(--cream-2); border-radius:var(--radius);
+    display:flex; align-items:center; justify-content:center; min-height:440px;
+  }
+  .pp-info{ flex:1 1 50%; }
+  .pp-info h1{ font-family:'Cinzel',serif; letter-spacing:2px; font-size:24px; margin-bottom:10px; }
+  .pp-price{ font-size:20px; font-weight:500; margin-bottom:4px; }
+  .pp-qty-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .pp-qty-row span{ font-size:11px; letter-spacing:1.5px; font-weight:600; opacity:0.7; }
+  .pp-qty-row .qty-row{ margin-top:0; }
+  .pp-details{ margin-top:34px; border-top:1px solid var(--line); }
+  .pp-accordion{ border-bottom:1px solid var(--line); }
+  .pp-accordion-head{
+    width:100%; background:none; border:none; cursor:pointer; padding:18px 0;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:1.5px; font-weight:600; color:var(--navy);
+  }
+  .pp-accordion-icon{ font-size:15px; font-weight:400; transition:transform 0.2s ease; color:var(--gold); }
+  .pp-accordion.open .pp-accordion-icon{ transform:rotate(45deg); }
+  .pp-accordion-body{ max-height:0; overflow:hidden; transition:max-height 0.25s ease; }
+  .pp-accordion-body p{ font-size:13px; line-height:1.7; opacity:0.85; padding-bottom:18px; }
+  .pp-accordion.open .pp-accordion-body{ max-height:220px; }
+  .pp-tambem{ margin-top:40px; }
+  .pp-tambem > span{ font-size:11px; letter-spacing:1.5px; font-weight:600; color:var(--gold); display:block; margin-bottom:16px; }
+  .pp-tambem-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+  .pp-tambem-item{
+    cursor:pointer; text-align:center; background:var(--cream-2); border-radius:var(--radius);
+    padding:16px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;
+    transition:transform 0.15s ease;
+  }
+  .pp-tambem-item:hover{ transform:translateY(-3px); }
+  .pp-tambem-name{ font-size:10px; letter-spacing:0.5px; font-weight:600; }
+  .pp-tambem-price{ font-size:11px; opacity:0.7; }
+  @media (max-width:760px){
+    .pp-layout{ flex-direction:column; gap:32px; }
+    .pp-gallery{ width:100%; min-height:300px; }
+  }
 
   /* ABOUT */
   .about{ display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
@@ -282,7 +330,7 @@
   </div>
 </header>
 
-<section class="hero">
+<section class="hero" id="hero">
   <div class="hero-side left"></div>
   <div class="hero-center">
     <h1>PORTOFINO</h1>
@@ -291,6 +339,13 @@
     <a href="#colecao" class="btn">VER COLEÇÃO</a>
   </div>
   <div class="hero-side right"></div>
+</section>
+
+<section class="product-page" id="productPage" style="display:none;">
+  <div class="wrap">
+    <button class="pp-back" onclick="closeProductPage()">← VOLTAR À COLEÇÃO</button>
+    <div class="pp-layout" id="productPageContent"></div>
+  </div>
 </section>
 
 <section class="products" id="colecao">
@@ -391,7 +446,7 @@
 
 <!-- CHECKOUT MODAL -->
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
+  <div class="modal" id="modalBox">
     <button class="modal-close" id="modalClose">✕</button>
     <div id="modalContent"></div>
   </div>
@@ -404,7 +459,7 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-    { id:1, name:"Classic Navy", desc:"Algodão premium · âncora bordada", price:139.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+    { id:1, name:"Classic Navy", desc:"Algodão premium · âncora bordada", price:149.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
     { id:2, name:"Riviera Green", desc:"Algodão premium · âncora bordada", price:149.90, color:"#1B3D2D", brim:"#132a20", patch:"#CDBA9A" },
     { id:3, name:"Sand Canvas", desc:"Sarja de algodão · aba curva", price:139.90, color:"#CDBA9A", brim:"#b8a17c", patch:"#0D1B2A" },
     { id:4, name:"Wine Edition", desc:"Edição limitada · veludo cotelê", price:159.90, color:"#5B1E2D", brim:"#421521", patch:"#CDBA9A" },
@@ -426,6 +481,7 @@
       console.error('Não foi possível carregar o estoque do Supabase:', err);
     }
     renderProducts();
+    checkHashProduct();
   }
 
   function estoqueDe(id){
@@ -436,6 +492,11 @@
 
   function formatPrice(v){
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  }
+
+  function formatInstallment(price){
+    const parcela = price / 3;
+    return `3x de ${formatPrice(parcela)} sem juros`;
   }
 
   function capSVG(p, size){
@@ -455,16 +516,140 @@
       const esgotado = estoque !== null && estoque <= 0;
       const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
       return `
-      <div class="card ${esgotado ? 'esgotado-card' : ''}">
+      <div class="card ${esgotado ? 'esgotado-card' : ''}" onclick="openProduct(${p.id})" style="cursor:pointer;">
         ${capSVG(p, 150)}
         <h3>${p.name.toUpperCase()}</h3>
         <div class="desc">${p.desc}</div>
         <div class="price">${formatPrice(p.price)}</div>
+        <div class="installment">${formatInstallment(p.price)}</div>
         ${estoqueBaixo ? `<div class="stock-warn">Últimas ${estoque} unidades</div>` : ''}
-        <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="addToCart(${p.id}, this)">${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}</button>
+        <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="event.stopPropagation(); addToCart(${p.id}, this)">${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}</button>
       </div>
     `;
     }).join('');
+  }
+
+  // Abre a página cheia do produto (estilo "página de produto" de e-commerce)
+  function openProduct(id){
+    const p = products.find(x => x.id === id);
+    if(!p) return;
+    const estoque = estoqueDe(id);
+    const esgotado = estoque !== null && estoque <= 0;
+    const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
+
+    const outros = products.filter(x => x.id !== id).slice(0, 3);
+    ppQty = 1;
+
+    document.getElementById('productPageContent').innerHTML = `
+      <div class="pp-gallery">${capSVG(p, 340)}</div>
+      <div class="pp-info">
+        <h1>${p.name.toUpperCase()}</h1>
+        <div class="pp-price">${formatPrice(p.price)}</div>
+        <div class="installment" style="margin-bottom:14px;">${formatInstallment(p.price)}</div>
+        ${esgotado
+          ? `<div class="stock-warn" style="margin-bottom:14px;">Produto esgotado no momento</div>`
+          : estoqueBaixo
+            ? `<div class="stock-warn" style="margin-bottom:14px;">Últimas ${estoque} unidades</div>`
+            : ''
+        }
+        ${!esgotado ? `
+        <div class="pp-qty-row">
+          <span>QUANTIDADE</span>
+          <div class="qty-row">
+            <button onclick="changeProductQty(-1)">−</button>
+            <span id="ppQty">1</span>
+            <button onclick="changeProductQty(1)">+</button>
+          </div>
+        </div>` : ''}
+        <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="addProductToCart(${p.id}, this)" style="width:100%;">
+          ${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}
+        </button>
+        <div class="pp-details">
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>DESCRIÇÃO</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body"><p>${p.desc}</p></div>
+          </div>
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>TAMANHO</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body"><p>Ajuste traseiro (strapback) — serve confortavelmente na maioria das cabeças adultas, perímetro aproximado de 55 a 60 cm.</p></div>
+          </div>
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>ENTREGA</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250. Trocas em até 7 dias após o recebimento.</p></div>
+          </div>
+        </div>
+        ${outros.length ? `
+        <div class="pp-tambem">
+          <span>LEVE TAMBÉM</span>
+          <div class="pp-tambem-grid">
+            ${outros.map(o => `
+              <div class="pp-tambem-item" onclick="openProduct(${o.id})">
+                ${capSVG(o, 70)}
+                <div class="pp-tambem-name">${o.name.toUpperCase()}</div>
+                <div class="pp-tambem-price">${formatPrice(o.price)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+    `;
+
+    document.getElementById('hero').style.display = 'none';
+    document.getElementById('colecao').style.display = 'none';
+    document.getElementById('sobre').style.display = 'none';
+    document.getElementById('contato').style.display = 'none';
+    document.getElementById('productPage').style.display = 'block';
+    window.scrollTo(0, 0);
+    history.pushState({produto:id}, '', `#produto-${id}`);
+  }
+
+  function closeProductPage(scrollTargetId){
+    document.getElementById('hero').style.display = '';
+    document.getElementById('colecao').style.display = '';
+    document.getElementById('sobre').style.display = '';
+    document.getElementById('contato').style.display = '';
+    document.getElementById('productPage').style.display = 'none';
+    const target = scrollTargetId ? document.getElementById(scrollTargetId) : null;
+    if(target){ target.scrollIntoView({ behavior:'smooth' }); }
+    else { window.scrollTo(0, 0); }
+  }
+
+  // Permite abrir um produto direto por link (ex: seusite.com/#produto-3) e usar o botão "voltar" do navegador
+  function checkHashProduct(){
+    const hash = window.location.hash.replace('#', '');
+    const m = hash.match(/^produto-(\d+)$/);
+    if(m){ openProduct(Number(m[1])); }
+    else { closeProductPage(hash || null); }
+  }
+  window.addEventListener('popstate', checkHashProduct);
+  window.addEventListener('hashchange', checkHashProduct);
+
+  // Quantidade escolhida na página de produto (reinicia em 1 sempre que abre um produto)
+  let ppQty = 1;
+  function toggleAccordion(headEl){
+    const accordion = headEl.closest('.pp-accordion');
+    accordion.classList.toggle('open');
+  }
+
+  function changeProductQty(delta){
+    const novo = ppQty + delta;
+    if(novo < 1) return;
+    ppQty = novo;
+    const el = document.getElementById('ppQty');
+    if(el) el.textContent = ppQty;
+  }
+
+  function addProductToCart(id, btn){
+    for(let i=0; i<ppQty; i++){ addToCart(id, i === ppQty-1 ? btn : null); }
+    ppQty = 1;
+    const el = document.getElementById('ppQty');
+    if(el) el.textContent = ppQty;
   }
 
   function addToCart(id, btn){
