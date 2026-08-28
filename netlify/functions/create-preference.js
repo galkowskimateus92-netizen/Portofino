@@ -1,6 +1,16 @@
 // Esta função roda no SERVIDOR da Netlify, nunca no navegador do cliente.
 // O Access Token fica guardado como variável de ambiente (MP_ACCESS_TOKEN),
 // configurada no painel da Netlify — nunca aparece no código nem no navegador.
+//
+// Também consulta o Supabase (com a SERVICE ROLE KEY, só no servidor) para
+// garantir que o produto ainda tem estoque antes de gerar o link de pagamento.
+
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -21,10 +31,42 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Carrinho vazio.' }) };
     }
 
+    // Só itens com productId entram na checagem de estoque (ex: "Frete" não tem productId e é ignorado)
+    const itensComProduto = items.filter((i) => i.productId !== undefined && i.productId !== null);
+
+    if (itensComProduto.length > 0) {
+      const productIds = itensComProduto.map((i) => i.productId);
+      const { data: produtos, error: estoqueError } = await supabase
+        .from('produtos')
+        .select('id, nome, estoque')
+        .in('id', productIds);
+
+      if (estoqueError) {
+        console.error('Erro ao consultar estoque no Supabase:', estoqueError.message);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Não foi possível checar o estoque.' }) };
+      }
+
+      const estoquePorId = new Map(produtos.map((p) => [p.id, p]));
+      const semEstoque = [];
+      for (const item of itensComProduto) {
+        const produto = estoquePorId.get(item.productId);
+        if (!produto || produto.estoque < Number(item.qty)) {
+          semEstoque.push(produto ? produto.nome : `produto #${item.productId}`);
+        }
+      }
+      if (semEstoque.length > 0) {
+        return {
+          statusCode: 409,
+          body: JSON.stringify({ error: 'Sem estoque suficiente para: ' + semEstoque.join(', ') }),
+        };
+      }
+    }
+
     const siteUrl = process.env.URL || `https://${event.headers.host}`;
 
     const preferenceBody = {
       items: items.map((i) => ({
+        ...(i.productId !== undefined && i.productId !== null ? { id: String(i.productId) } : {}),
         title: `Portofino — ${i.name}`,
         quantity: Number(i.qty),
         unit_price: Number(i.price),
