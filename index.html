@@ -72,6 +72,15 @@
     min-width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   }
   .burger{ display:none; background:none; border:none; font-size:22px; cursor:pointer; color:var(--navy); }
+  .mobile-menu{
+    display:none; flex-direction:column; background:var(--cream); border-top:1px solid var(--line);
+    padding:8px 28px 18px;
+  }
+  .mobile-menu a{
+    padding:14px 0; border-bottom:1px solid var(--line); font-size:13px; letter-spacing:1px;
+    font-family:'Montserrat',sans-serif; font-weight:500;
+  }
+  .mobile-menu.open{ display:flex; }
 
   /* HERO */
   .hero{
@@ -312,7 +321,7 @@
 
 <header>
   <div class="nav">
-    <button class="burger">☰</button>
+    <button class="burger" onclick="toggleMobileMenu()">☰</button>
     <div class="logo">
       <div class="name">PORTOFINO</div>
       <div class="sub">ITALIAN RIVIERA</div>
@@ -327,6 +336,11 @@
         ⚓ CARRINHO <span class="cart-count" id="cartCount">0</span>
       </button>
     </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#colecao" onclick="closeMobileMenu()">Coleção</a>
+    <a href="#sobre" onclick="closeMobileMenu()">Sobre</a>
+    <a href="#contato" onclick="closeMobileMenu()">Contato</a>
   </div>
 </header>
 
@@ -751,6 +765,13 @@
     modalContent.innerHTML = html;
     modalOverlay.classList.add('show');
   }
+  function toggleMobileMenu(){
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
+  function closeMobileMenu(){
+    document.getElementById('mobileMenu').classList.remove('open');
+  }
+
   function closeModal(){ modalOverlay.classList.remove('show'); }
 
   const infoContent = {
