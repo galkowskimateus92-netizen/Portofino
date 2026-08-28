@@ -1,0 +1,9 @@
+{
+  "name": "portofino",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Loja Portofino - Italian Riviera",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
