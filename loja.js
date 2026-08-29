@@ -98,6 +98,7 @@
       <div class="pp-gallery">${capSVG(p, 340)}</div>
       <div class="pp-info">
         <h1>${p.name.toUpperCase()}</h1>
+        <div class="stars-summary" id="starsSummary-${p.id}">Carregando avaliações…</div>
         <div class="pp-price">${formatPrice(p.price)}</div>
         <div class="installment" style="margin-bottom:14px;">${formatInstallment(p.price)}</div>
         ${esgotado
@@ -137,6 +138,12 @@
             </button>
             <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250. Trocas em até 7 dias após o recebimento.</p></div>
           </div>
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>AVALIAÇÕES</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body" id="reviewsBody-${p.id}"><p>Carregando avaliações…</p></div>
+          </div>
         </div>
         ${outros.length ? `
         <div class="pp-tambem">
@@ -158,6 +165,7 @@
     document.getElementById('productPage').style.display = 'block';
     window.scrollTo(0, 0);
     history.pushState({produto:id}, '', `#produto-${id}`);
+    loadAndRenderReviews(p.id);
   }
 
   function closeProductPage(scrollTargetId){
@@ -474,6 +482,109 @@
 
   checkoutBtn.onclick = openShippingModal;
   document.getElementById('modalClose').onclick = closeModal;
+
+  // ===== AVALIAÇÕES =====
+  function renderStarsHTML(nota){
+    const cheias = Math.round(nota);
+    let out = '';
+    for(let i=1; i<=5; i++){ out += i <= cheias ? '★' : '☆'; }
+    return out;
+  }
+
+  async function loadAndRenderReviews(productId){
+    const summaryEl = document.getElementById(`starsSummary-${productId}`);
+    const bodyEl = document.getElementById(`reviewsBody-${productId}`);
+    try{
+      const { data, error } = await supabaseClient
+        .from('avaliacoes')
+        .select('nome, nota, comentario, criado_em')
+        .eq('produto_id', productId)
+        .order('criado_em', { ascending: false });
+      if(error) throw error;
+
+      const total = data.length;
+      const media = total > 0 ? data.reduce((a,r) => a + r.nota, 0) / total : 0;
+
+      if(summaryEl){
+        summaryEl.innerHTML = total > 0
+          ? `<span class="stars">${renderStarsHTML(media)}</span> <span class="stars-count">${media.toFixed(1)} · ${total} avaliaç${total===1?'ão':'ões'}</span>`
+          : `<span class="stars-count">Seja o primeiro a avaliar</span>`;
+      }
+
+      if(bodyEl){
+        bodyEl.innerHTML = `
+          ${total === 0 ? `<p class="small" style="margin-bottom:14px;">Ainda não há avaliações desse produto.</p>` : data.map(r => `
+            <div class="review-item">
+              <div class="review-stars">${renderStarsHTML(r.nota)}</div>
+              <div class="review-name">${escapeHTML(r.nome)}</div>
+              ${r.comentario ? `<p class="review-comment">${escapeHTML(r.comentario)}</p>` : ''}
+            </div>
+          `).join('')}
+          <div class="review-form">
+            <span class="review-form-title">DEIXE SUA AVALIAÇÃO</span>
+            <select id="reviewStars-${productId}">
+              <option value="5">★★★★★ — Ótimo</option>
+              <option value="4">★★★★☆ — Bom</option>
+              <option value="3">★★★☆☆ — Ok</option>
+              <option value="2">★★☆☆☆ — Ruim</option>
+              <option value="1">★☆☆☆☆ — Péssimo</option>
+            </select>
+            <input type="text" id="reviewName-${productId}" placeholder="Seu nome" maxlength="60">
+            <textarea id="reviewComment-${productId}" placeholder="Conte como foi sua experiência (opcional)" maxlength="400" rows="3"></textarea>
+            <button class="add-btn" style="width:100%;" onclick="submitReview(${productId})">ENVIAR AVALIAÇÃO</button>
+            <div id="reviewMsg-${productId}" class="review-msg"></div>
+          </div>
+        `;
+      }
+    }catch(err){
+      console.error('Avaliações: erro ao carregar:', err.message);
+      if(bodyEl) bodyEl.innerHTML = `<p class="small">Não foi possível carregar as avaliações agora.</p>`;
+      if(summaryEl) summaryEl.innerHTML = '';
+    }
+  }
+
+  function escapeHTML(str){
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  async function submitReview(productId){
+    const nomeEl = document.getElementById(`reviewName-${productId}`);
+    const notaEl = document.getElementById(`reviewStars-${productId}`);
+    const comentarioEl = document.getElementById(`reviewComment-${productId}`);
+    const msgEl = document.getElementById(`reviewMsg-${productId}`);
+
+    const nome = nomeEl.value.trim();
+    if(!nome){
+      msgEl.textContent = 'Digite seu nome antes de enviar.';
+      msgEl.className = 'review-msg error';
+      return;
+    }
+
+    msgEl.textContent = 'Enviando...';
+    msgEl.className = 'review-msg';
+
+    try{
+      const { error } = await supabaseClient.from('avaliacoes').insert({
+        produto_id: productId,
+        nome: nome,
+        nota: Number(notaEl.value),
+        comentario: comentarioEl.value.trim(),
+      });
+      if(error) throw error;
+      await loadAndRenderReviews(productId);
+      const novoMsg = document.getElementById(`reviewMsg-${productId}`);
+      if(novoMsg){
+        novoMsg.textContent = 'Obrigado pela sua avaliação!';
+        novoMsg.className = 'review-msg success';
+      }
+    }catch(err){
+      console.error('Avaliações: erro ao enviar:', err.message);
+      msgEl.textContent = 'Não foi possível enviar agora. Tente novamente.';
+      msgEl.className = 'review-msg error';
+    }
+  }
 
   carregarEstoque();
   renderCart();

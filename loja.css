@@ -164,7 +164,26 @@
   .pp-accordion.open .pp-accordion-icon{ transform:rotate(45deg); }
   .pp-accordion-body{ max-height:0; overflow:hidden; transition:max-height 0.25s ease; }
   .pp-accordion-body p{ font-size:13px; line-height:1.7; opacity:0.85; padding-bottom:18px; }
-  .pp-accordion.open .pp-accordion-body{ max-height:220px; }
+  .pp-accordion.open .pp-accordion-body{ max-height:none; }
+
+  .stars-summary{ font-size:13px; margin-bottom:10px; min-height:18px; }
+  .stars-summary .stars{ color:var(--gold); letter-spacing:1px; }
+  .stars-summary .stars-count{ opacity:0.7; margin-left:4px; }
+
+  .review-item{ border-bottom:1px solid var(--line); padding:14px 0; }
+  .review-stars{ color:var(--gold); letter-spacing:1px; font-size:13px; }
+  .review-name{ font-size:12px; font-weight:600; margin-top:4px; }
+  .review-comment{ font-size:13px; line-height:1.6; opacity:0.85; margin-top:4px; }
+
+  .review-form{ padding-top:16px; display:flex; flex-direction:column; gap:10px; }
+  .review-form-title{ font-size:11px; letter-spacing:1.5px; font-weight:600; color:var(--gold); }
+  .review-form select, .review-form input, .review-form textarea{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    background:#fff; font-family:'Montserrat',sans-serif; font-size:13px; color:var(--navy); resize:vertical;
+  }
+  .review-msg{ font-size:12px; min-height:16px; }
+  .review-msg.success{ color:#2f6b3a; }
+  .review-msg.error{ color:#a13a3a; }
   .pp-tambem{ margin-top:40px; }
   .pp-tambem > span{ font-size:11px; letter-spacing:1.5px; font-weight:600; color:var(--gold); display:block; margin-bottom:16px; }
   .pp-tambem-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
@@ -254,7 +273,7 @@
   .modal p.small{ text-align:center; font-size:12px; opacity:0.6; margin-bottom:24px; }
   .field{ margin-bottom:14px; }
   .field label{ font-size:10.5px; letter-spacing:1px; font-weight:600; opacity:0.7; display:block; margin-bottom:6px; }
-  .field input{ width:100%; padding:11px 13px; border:1px solid var(--line); background:#fff; font-size:12.5px; border-radius:var(--radius); font-family:'Montserrat',sans-serif; }
+  .field input, .field select, .field textarea{ width:100%; padding:11px 13px; border:1px solid var(--line); background:#fff; font-size:12.5px; border-radius:var(--radius); font-family:'Montserrat',sans-serif; resize:vertical; }
   .modal-close{ position:absolute; top:16px; right:18px; background:none; border:none; font-size:18px; cursor:pointer; }
   .success-box{ text-align:center; padding:10px 0; }
   .success-box .anchor-big{ font-size:34px; color:var(--gold); margin-bottom:14px; }
