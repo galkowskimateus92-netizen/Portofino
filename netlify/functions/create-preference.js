@@ -91,6 +91,12 @@ exports.handler = async (event) => {
         email: payer.email || undefined,
       };
     }
+    // Guarda o e-mail também em "metadata": o Mercado Pago às vezes não devolve
+    // o payer.email no pagamento final (ex: pagamentos como visitante), então isso
+    // garante que o webhook sempre consiga mandar o e-mail de confirmação certo.
+    if (payer && payer.email) {
+      preferenceBody.metadata = { comprador_email: payer.email };
+    }
 
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',

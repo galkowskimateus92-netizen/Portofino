@@ -144,15 +144,19 @@ exports.handler = async (event) => {
       const siteUrl = process.env.URL || `https://${event.headers.host}`;
       const numeroPedido = payment.external_reference || `#${payment.id}`;
 
+      // Preferimos o e-mail salvo em "metadata" na hora da compra (mais confiável),
+      // e usamos o payer.email do Mercado Pago só como reforço.
+      const emailComprador = payment.metadata?.comprador_email || payment.payer?.email;
+
       // Envia o e-mail de "recebemos seu pedido" pro comprador
-      await enviarEmailConfirmacao(payment.payer?.email, numeroPedido);
+      await enviarEmailConfirmacao(emailComprador, numeroPedido);
 
       const formBody = new URLSearchParams({
         'form-name': 'pagamentos-confirmados',
         pedido: payment.external_reference || '(sem número de pedido)',
         status: payment.status,
         valor: `R$ ${Number(payment.transaction_amount || 0).toFixed(2)}`,
-        pagador_email: payment.payer?.email || '',
+        pagador_email: emailComprador || '',
         payment_id: String(payment.id),
       });
 
