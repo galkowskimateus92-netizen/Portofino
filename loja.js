@@ -23,6 +23,7 @@
       console.error('Não foi possível carregar o estoque do Supabase:', err);
     }
     if(document.getElementById('productGrid')) renderProducts();
+    if(document.getElementById('homePreviewGrid')) renderHomePreview();
     if(document.getElementById('productPage')) checkHashProduct();
   }
 
@@ -60,6 +61,27 @@
       <div class="cap-patch" style="color:${p.patch}; top:${size*0.24}px; font-size:${size*0.06}px;">PORTOFINO</div>
       <div class="cap-brim" style="background:${p.brim};"></div>
     </div>`;
+  }
+
+  // Prévia dos produtos na home — cada card leva direto pra página do produto na Coleção
+  function renderHomePreview(){
+    const grid = document.getElementById('homePreviewGrid');
+    grid.innerHTML = products.map(p => {
+      const estoque = estoqueDe(p.id);
+      const esgotado = estoque !== null && estoque <= 0;
+      const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
+      return `
+      <a class="card ${esgotado ? 'esgotado-card' : ''}" href="colecao.html#produto-${p.id}" style="display:block; cursor:pointer;">
+        ${capSVG(p, 150)}
+        <h3>${p.name.toUpperCase()}</h3>
+        <div class="desc">${p.desc}</div>
+        <div class="price">${formatPrice(p.price)}</div>
+        <div class="installment">${formatInstallment(p.price)}</div>
+        ${estoqueBaixo ? `<div class="stock-warn">Últimas ${estoque} unidades</div>` : ''}
+        <div class="add-btn ${esgotado ? 'esgotado' : ''}">${esgotado ? 'ESGOTADO' : 'VER PRODUTO'}</div>
+      </a>
+    `;
+    }).join('');
   }
 
   function renderProducts(){
