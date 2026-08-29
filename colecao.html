@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coleção — Portofino | Bonés Italian Riviera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,500&family=Cinzel:wght@400;500;600&family=Montserrat:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="loja.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- Formulário oculto para o Netlify Forms reconhecer e salvar os pedidos -->
+<form name="pedidos" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="text" name="pedido" />
+  <input type="text" name="nome" />
+  <input type="text" name="cpf" />
+  <input type="email" name="email" />
+  <input type="text" name="telefone" />
+  <input type="text" name="cep" />
+  <input type="text" name="endereco" />
+  <input type="text" name="numero" />
+  <input type="text" name="complemento" />
+  <input type="text" name="bairro" />
+  <input type="text" name="cidade" />
+  <input type="text" name="estado" />
+  <input type="text" name="itens" />
+  <input type="text" name="total" />
+  <input name="bot-field" />
+</form>
+
+<!-- Formulário oculto separado: só recebe registros quando o webhook confirma pagamento aprovado -->
+<form name="pagamentos-confirmados" data-netlify="true" hidden>
+  <input type="text" name="pedido" />
+  <input type="text" name="status" />
+  <input type="text" name="valor" />
+  <input type="text" name="pagador_email" />
+  <input type="text" name="payment_id" />
+</form>
+
+<div class="announce">FRETE GRÁTIS ACIMA DE R$ 250 · ENVIO PARA TODO O BRASIL</div>
+
+<header>
+  <div class="nav">
+    <button class="burger" onclick="toggleMobileMenu()">☰</button>
+    <a class="logo" href="index.html">
+      <div class="name">PORTOFINO</div>
+      <div class="sub">ITALIAN RIVIERA</div>
+    </a>
+    <div class="nav-links">
+      <a href="colecao.html">Coleção</a>
+      <a href="index.html#sobre">Sobre</a>
+      <a href="index.html#contato">Contato</a>
+    </div>
+    <div class="nav-right">
+      <button class="cart-btn" id="cartOpenBtn">
+        ⚓ CARRINHO <span class="cart-count" id="cartCount">0</span>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="colecao.html" onclick="closeMobileMenu()">Coleção</a>
+    <a href="index.html#sobre" onclick="closeMobileMenu()">Sobre</a>
+    <a href="index.html#contato" onclick="closeMobileMenu()">Contato</a>
+  </div>
+</header>
+
+<section class="product-page" id="productPage" style="display:none;">
+  <div class="wrap">
+    <button class="pp-back" onclick="closeProductPage()">← VOLTAR À COLEÇÃO</button>
+    <div class="pp-layout" id="productPageContent"></div>
+  </div>
+</section>
+
+<section class="products" id="colecao" style="padding-top:36px;">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">A COLEÇÃO</div>
+      <h2>BONÉS PORTOFINO</h2>
+      <p>Três tons inspirados na Riviera Italiana</p>
+    </div>
+    <div class="grid" id="productGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="logo" href="index.html" style="text-align:left; display:block;">
+          <div class="name" style="font-size:18px;">PORTOFINO</div>
+          <div class="sub">ITALIAN RIVIERA</div>
+        </a>
+        <p style="font-size:12px; opacity:0.65; margin-top:14px; line-height:1.7;">Bonés inspirados na costa italiana, feitos para durar.</p>
+      </div>
+      <div>
+        <h4>LOJA</h4>
+        <ul>
+          <li><a href="colecao.html">Coleção</a></li>
+          <li><a href="colecao.html">Lançamentos</a></li>
+          <li><a href="colecao.html">Edições Limitadas</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>AJUDA</h4>
+        <ul>
+          <li><a href="#" onclick="openInfoModal('trocas'); return false;">Trocas e Devoluções</a></li>
+          <li><a href="#" onclick="openInfoModal('frete'); return false;">Frete e Entrega</a></li>
+          <li><a href="#" onclick="openInfoModal('tamanhos'); return false;">Guia de Tamanhos</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>CONTATO</h4>
+        <ul><li><a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 PORTOFINO — Todos os direitos reservados</span>
+      <div class="foot-pillars">
+        <span>⚓ ITALY</span><span>⛵ FREEDOM</span><span>🌳 ELEGANCE</span><span>🚗 TIMELESS</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- CART DRAWER -->
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3>SEU CARRINHO</h3>
+    <button class="close-btn" id="drawerClose">✕</button>
+  </div>
+  <div class="drawer-items" id="drawerItems"></div>
+  <div class="drawer-foot">
+    <div class="subtotal-row"><span>Subtotal</span><span id="subtotalVal">R$ 0,00</span></div>
+    <div class="subtotal-row" style="font-weight:400; font-size:12.5px; opacity:0.8;"><span>Frete</span><span id="freteVal">R$ 0,00</span></div>
+    <div class="subtotal-row" style="border-top:1px solid var(--line); padding-top:10px;"><span>Total</span><span id="totalVal">R$ 0,00</span></div>
+    <button class="btn checkout-btn" id="checkoutBtn">FINALIZAR COMPRA</button>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="loja.js"></script>
+</body>
+</html>

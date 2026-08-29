@@ -1,0 +1,479 @@
+  // Conexão com o Supabase (banco onde fica o estoque)
+  const SUPABASE_URL = 'https://mfopdrdmthrztygsimex.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_SwOUdKjJtuNWmsZMZLgQag_EbxZr9xf';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const products = [
+    { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:109.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+    { id:2, name:"Boné Portofino Verde", desc:"Algodão premium · âncora bordada", price:109.90, color:"#1B3D2D", brim:"#132a20", patch:"#CDBA9A" },
+    { id:6, name:"Boné Portofino Branco", desc:"Algodão leve · verão", price:109.90, color:"#F2EFE6", brim:"#ddd6c4", patch:"#0D1B2A" },
+  ];
+
+  // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
+  // assume-se disponível (null = "ainda não sei"), pra não travar a loja
+  // se o Supabase estiver fora do ar.
+  const estoquePorId = {};
+
+  async function carregarEstoque(){
+    try{
+      const { data, error } = await supabaseClient.from('produtos').select('id, estoque');
+      if(error) throw error;
+      data.forEach(row => { estoquePorId[row.id] = row.estoque; });
+    }catch(err){
+      console.error('Não foi possível carregar o estoque do Supabase:', err);
+    }
+    if(document.getElementById('productGrid')) renderProducts();
+    if(document.getElementById('productPage')) checkHashProduct();
+  }
+
+  function estoqueDe(id){
+    return estoquePorId.hasOwnProperty(id) ? estoquePorId[id] : null; // null = desconhecido, trata como disponível
+  }
+
+  // Carrinho: guardado no localStorage pra "viajar" entre a Home e a página de Coleção
+  const CART_STORAGE_KEY = 'portofino_cart';
+  function loadCart(){
+    try{
+      const raw = localStorage.getItem(CART_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(err){ return []; }
+  }
+  function saveCart(){
+    try{ localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); }catch(err){ /* segue sem salvar */ }
+  }
+  let cart = loadCart();
+
+  function formatPrice(v){
+    return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  }
+
+  function formatInstallment(price){
+    const parcela = price / 3;
+    return `3x de ${formatPrice(parcela)} sem juros`;
+  }
+
+  function capSVG(p, size){
+    return `<div class="cap" style="width:${size}px; height:${size*0.8}px;">
+      <div class="cap-top" style="background:${p.color}; height:${size*0.55}px; left:${size*0.1}px; right:${size*0.1}px; border-radius:${size*0.5}px ${size*0.5}px 6px 6px;"></div>
+      <div class="cap-button" style="background:#B08A4E;"></div>
+      ${p.rope ? `<div class="cap-rope" style="left:${size*0.1}px; right:${size*0.1}px;"></div>` : ''}
+      <div class="cap-patch" style="color:${p.patch}; top:${size*0.24}px; font-size:${size*0.06}px;">PORTOFINO</div>
+      <div class="cap-brim" style="background:${p.brim};"></div>
+    </div>`;
+  }
+
+  function renderProducts(){
+    const grid = document.getElementById('productGrid');
+    grid.innerHTML = products.map(p => {
+      const estoque = estoqueDe(p.id);
+      const esgotado = estoque !== null && estoque <= 0;
+      const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
+      return `
+      <div class="card ${esgotado ? 'esgotado-card' : ''}" onclick="openProduct(${p.id})" style="cursor:pointer;">
+        ${capSVG(p, 150)}
+        <h3>${p.name.toUpperCase()}</h3>
+        <div class="desc">${p.desc}</div>
+        <div class="price">${formatPrice(p.price)}</div>
+        <div class="installment">${formatInstallment(p.price)}</div>
+        ${estoqueBaixo ? `<div class="stock-warn">Últimas ${estoque} unidades</div>` : ''}
+        <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="event.stopPropagation(); addToCart(${p.id}, this)">${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}</button>
+      </div>
+    `;
+    }).join('');
+  }
+
+  // Abre a página cheia do produto (estilo "página de produto" de e-commerce)
+  function openProduct(id){
+    const p = products.find(x => x.id === id);
+    if(!p) return;
+    if(!document.getElementById('colecao') || !document.getElementById('productPage')) return;
+    const estoque = estoqueDe(id);
+    const esgotado = estoque !== null && estoque <= 0;
+    const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
+
+    const outros = products.filter(x => x.id !== id).slice(0, 3);
+    ppQty = 1;
+
+    document.getElementById('productPageContent').innerHTML = `
+      <div class="pp-gallery">${capSVG(p, 340)}</div>
+      <div class="pp-info">
+        <h1>${p.name.toUpperCase()}</h1>
+        <div class="pp-price">${formatPrice(p.price)}</div>
+        <div class="installment" style="margin-bottom:14px;">${formatInstallment(p.price)}</div>
+        ${esgotado
+          ? `<div class="stock-warn" style="margin-bottom:14px;">Produto esgotado no momento</div>`
+          : estoqueBaixo
+            ? `<div class="stock-warn" style="margin-bottom:14px;">Últimas ${estoque} unidades</div>`
+            : ''
+        }
+        ${!esgotado ? `
+        <div class="pp-qty-row">
+          <span>QUANTIDADE</span>
+          <div class="qty-row">
+            <button onclick="changeProductQty(-1)">−</button>
+            <span id="ppQty">1</span>
+            <button onclick="changeProductQty(1)">+</button>
+          </div>
+        </div>` : ''}
+        <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="addProductToCart(${p.id}, this)" style="width:100%;">
+          ${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}
+        </button>
+        <div class="pp-details">
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>DESCRIÇÃO</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body"><p>${p.desc}</p></div>
+          </div>
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>TAMANHO</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body"><p>Ajuste traseiro (strapback) — serve confortavelmente na maioria das cabeças adultas, perímetro aproximado de 55 a 60 cm.</p></div>
+          </div>
+          <div class="pp-accordion">
+            <button class="pp-accordion-head" onclick="toggleAccordion(this)">
+              <span>ENTREGA</span><span class="pp-accordion-icon">+</span>
+            </button>
+            <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250. Trocas em até 7 dias após o recebimento.</p></div>
+          </div>
+        </div>
+        ${outros.length ? `
+        <div class="pp-tambem">
+          <span>LEVE TAMBÉM</span>
+          <div class="pp-tambem-grid">
+            ${outros.map(o => `
+              <div class="pp-tambem-item" onclick="openProduct(${o.id})">
+                ${capSVG(o, 70)}
+                <div class="pp-tambem-name">${o.name.toUpperCase()}</div>
+                <div class="pp-tambem-price">${formatPrice(o.price)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+    `;
+
+    document.getElementById('colecao').style.display = 'none';
+    document.getElementById('productPage').style.display = 'block';
+    window.scrollTo(0, 0);
+    history.pushState({produto:id}, '', `#produto-${id}`);
+  }
+
+  function closeProductPage(scrollTargetId){
+    const colecaoEl = document.getElementById('colecao');
+    const productPageEl = document.getElementById('productPage');
+    if(colecaoEl) colecaoEl.style.display = '';
+    if(productPageEl) productPageEl.style.display = 'none';
+    const target = scrollTargetId ? document.getElementById(scrollTargetId) : null;
+    if(target){ target.scrollIntoView({ behavior:'smooth' }); }
+    else { window.scrollTo(0, 0); }
+  }
+
+  // Permite abrir um produto direto por link (ex: seusite.com/#produto-3) e usar o botão "voltar" do navegador
+  function checkHashProduct(){
+    const hash = window.location.hash.replace('#', '');
+    const m = hash.match(/^produto-(\d+)$/);
+    if(m){ openProduct(Number(m[1])); }
+    else { closeProductPage(hash || null); }
+  }
+  window.addEventListener('popstate', checkHashProduct);
+  window.addEventListener('hashchange', checkHashProduct);
+
+  // Quantidade escolhida na página de produto (reinicia em 1 sempre que abre um produto)
+  let ppQty = 1;
+  function toggleAccordion(headEl){
+    const accordion = headEl.closest('.pp-accordion');
+    accordion.classList.toggle('open');
+  }
+
+  function changeProductQty(delta){
+    const novo = ppQty + delta;
+    if(novo < 1) return;
+    ppQty = novo;
+    const el = document.getElementById('ppQty');
+    if(el) el.textContent = ppQty;
+  }
+
+  function addProductToCart(id, btn){
+    for(let i=0; i<ppQty; i++){ addToCart(id, i === ppQty-1 ? btn : null); }
+    ppQty = 1;
+    const el = document.getElementById('ppQty');
+    if(el) el.textContent = ppQty;
+  }
+
+  function addToCart(id, btn){
+    const estoque = estoqueDe(id);
+    const existing = cart.find(i => i.id === id);
+    const qtyNoCarrinho = existing ? existing.qty : 0;
+    if(estoque !== null && qtyNoCarrinho + 1 > estoque){
+      if(btn){
+        btn.textContent = "SEM ESTOQUE SUFICIENTE";
+        setTimeout(()=>{ btn.textContent = "ADICIONAR AO CARRINHO"; }, 1500);
+      }
+      return;
+    }
+    if(existing){ existing.qty++; } else {
+      const p = products.find(p => p.id === id);
+      cart.push({ ...p, qty:1 });
+    }
+    saveCart();
+    renderCart();
+    if(btn){
+      btn.textContent = "ADICIONADO ✓";
+      btn.classList.add('added');
+      setTimeout(()=>{ btn.textContent = "ADICIONAR AO CARRINHO"; btn.classList.remove('added'); }, 1200);
+    }
+    openDrawer();
+  }
+
+  function changeQty(id, delta){
+    const item = cart.find(i => i.id === id);
+    if(!item) return;
+    item.qty += delta;
+    if(item.qty <= 0){ cart = cart.filter(i => i.id !== id); }
+    saveCart();
+    renderCart();
+  }
+
+  function removeItem(id){
+    cart = cart.filter(i => i.id !== id);
+    saveCart();
+    renderCart();
+  }
+
+  // Regras de frete: fixo abaixo do valor mínimo, grátis a partir dele
+  const FRETE_GRATIS_ACIMA_DE = 250;
+  const FRETE_FIXO = 19.90;
+
+  function calcularFrete(subtotal){
+    if(subtotal === 0) return 0;
+    return subtotal >= FRETE_GRATIS_ACIMA_DE ? 0 : FRETE_FIXO;
+  }
+
+  function renderCart(){
+    const itemsEl = document.getElementById('drawerItems');
+    const countEl = document.getElementById('cartCount');
+    const subtotalEl = document.getElementById('subtotalVal');
+    const freteEl = document.getElementById('freteVal');
+    const totalEl = document.getElementById('totalVal');
+    const totalCount = cart.reduce((a,i)=>a+i.qty,0);
+    countEl.textContent = totalCount;
+    const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
+    const frete = calcularFrete(subtotal);
+    subtotalEl.textContent = formatPrice(subtotal);
+    freteEl.textContent = frete === 0 ? 'Grátis' : formatPrice(frete);
+    totalEl.textContent = formatPrice(subtotal + frete);
+
+    if(cart.length === 0){
+      itemsEl.innerHTML = `<div class="cart-empty">Seu carrinho está vazio.<br>Explore a coleção Portofino.</div>`;
+      return;
+    }
+    itemsEl.innerHTML = cart.map(i => `
+      <div class="cart-item">
+        <div class="cart-cap-mini">
+          <div class="m-top" style="background:${i.color};"></div>
+          <div class="m-brim" style="background:${i.brim};"></div>
+        </div>
+        <div class="cart-item-info">
+          <h4>PORTOFINO ${i.name.toUpperCase()}</h4>
+          <div class="p">${formatPrice(i.price)}</div>
+          <div class="qty-row">
+            <button onclick="changeQty(${i.id}, -1)">−</button>
+            <span>${i.qty}</span>
+            <button onclick="changeQty(${i.id}, 1)">+</button>
+            <span class="remove-link" onclick="removeItem(${i.id})">remover</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Drawer controls
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('overlay');
+  function openDrawer(){ drawer.classList.add('show'); overlay.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); overlay.classList.remove('show'); }
+  document.getElementById('cartOpenBtn').onclick = openDrawer;
+  document.getElementById('drawerClose').onclick = closeDrawer;
+  overlay.onclick = () => { closeDrawer(); closeModal(); };
+
+  // Checkout: primeiro coleta o endereço de entrega, depois manda pro pagamento
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalContent = document.getElementById('modalContent');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+
+  function showModalMessage(html){
+    modalContent.innerHTML = html;
+    modalOverlay.classList.add('show');
+  }
+  function toggleMobileMenu(){
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
+  function closeMobileMenu(){
+    document.getElementById('mobileMenu').classList.remove('open');
+  }
+
+  function closeModal(){ modalOverlay.classList.remove('show'); }
+
+  const infoContent = {
+    trocas: {
+      title: 'TROCAS E DEVOLUÇÕES',
+      body: `Você tem até 7 dias corridos após o recebimento para solicitar troca ou devolução, conforme o Código de Defesa do Consumidor.
+      <br><br>Entre em contato pelo e-mail <a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a> informando o número do pedido — respondemos com o passo a passo.`
+    },
+    frete: {
+      title: 'FRETE E ENTREGA',
+      body: `Enviamos para todo o Brasil pelos Correios. Frete grátis em compras acima de R$250.
+      <br><br>Prazo médio de envio: 2 a 5 dias úteis após a confirmação do pagamento, mais o prazo de transporte dos Correios até seu endereço.`
+    },
+    tamanhos: {
+      title: 'GUIA DE TAMANHOS',
+      body: `Nossos bonés têm ajuste traseiro (strapback), servindo confortavelmente na maioria das cabeças adultas — perímetro aproximado de 55 a 60 cm.
+      <br><br>Dúvidas sobre um modelo específico? Manda um e-mail pra <a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a>.`
+    }
+  };
+
+  function openInfoModal(key){
+    const info = infoContent[key];
+    if(!info) return;
+    modalContent.innerHTML = `<h3>${info.title}</h3><p class="small" style="text-align:left; line-height:1.7;">${info.body}</p>`;
+    modalOverlay.classList.add('show');
+  }
+
+  function openShippingModal(){
+    if(cart.length === 0) return;
+    const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
+    const frete = calcularFrete(subtotal);
+    modalContent.innerHTML = `
+      <h3>DADOS PARA ENTREGA</h3>
+      <p class="small">Subtotal: ${formatPrice(subtotal)} + Frete: ${frete === 0 ? 'Grátis' : formatPrice(frete)} = <strong>${formatPrice(subtotal + frete)}</strong></p>
+      <form id="shippingForm">
+        <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" required></div>
+        <div class="field"><label>CPF</label><input type="text" name="cpf" required></div>
+        <div class="field"><label>E-MAIL</label><input type="email" name="email" required></div>
+        <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" required></div>
+        <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInput" placeholder="00000-000" required></div>
+        <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInput" required></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" required></div>
+          <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento"></div>
+        </div>
+        <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInput" required></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" required></div>
+          <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" required></div>
+        </div>
+        <button type="submit" class="btn" style="width:100%; margin-top:8px;">IR PARA O PAGAMENTO</button>
+      </form>
+    `;
+    modalOverlay.classList.add('show');
+    document.getElementById('cepInput').addEventListener('blur', lookupCep);
+    document.getElementById('shippingForm').onsubmit = handleShippingSubmit;
+  }
+
+  // Busca o endereço automaticamente a partir do CEP (API pública ViaCEP)
+  async function lookupCep(e){
+    const cep = e.target.value.replace(/\D/g,'');
+    if(cep.length !== 8) return;
+    try{
+      const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await resp.json();
+      if(!data.erro){
+        document.getElementById('enderecoInput').value = data.logradouro || '';
+        document.getElementById('bairroInput').value = data.bairro || '';
+        document.getElementById('cidadeInput').value = data.localidade || '';
+        document.getElementById('estadoInput').value = data.uf || '';
+      }
+    }catch(err){ /* se a busca falhar, o cliente preenche na mão mesmo */ }
+  }
+
+  async function handleShippingSubmit(e){
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'ENVIANDO...';
+
+    const orderNumber = 'PTF-' + Math.floor(10000 + Math.random()*89999);
+    const fd = new FormData(form);
+    const payer = { name: fd.get('nome'), email: fd.get('email') };
+    const itemsDesc = cart.map(i => `${i.qty}x ${i.name}`).join(', ');
+    const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
+    const frete = calcularFrete(subtotal);
+
+    // Salva o pedido + endereço no Netlify Forms (você recebe por e-mail / vê no painel)
+    const body = new URLSearchParams({
+      'form-name':'pedidos',
+      pedido: orderNumber,
+      nome: fd.get('nome'),
+      cpf: fd.get('cpf'),
+      email: fd.get('email'),
+      telefone: fd.get('telefone'),
+      cep: fd.get('cep'),
+      endereco: fd.get('endereco'),
+      numero: fd.get('numero'),
+      complemento: fd.get('complemento') || '',
+      bairro: fd.get('bairro'),
+      cidade: fd.get('cidade'),
+      estado: fd.get('estado'),
+      itens: itemsDesc,
+      total: formatPrice(subtotal + frete)
+    });
+
+    try{
+      await fetch('/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body: body.toString()
+      });
+    }catch(err){
+      // mesmo que o registro falhe, seguimos pro pagamento — não trava a venda
+    }
+
+    startCheckout(orderNumber, payer, frete);
+  }
+
+  async function startCheckout(orderNumber, payer, frete){
+    checkoutBtn.disabled = true;
+    checkoutBtn.textContent = 'PROCESSANDO...';
+    try{
+      const items = cart.map(i => ({ productId:i.id, name:i.name, qty:i.qty, price:i.price }));
+      if(frete > 0){
+        items.push({ name:'Frete', qty:1, price:frete });
+      }
+      const resp = await fetch('/.netlify/functions/create-preference', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          items: items,
+          external_reference: orderNumber,
+          payer: payer
+        })
+      });
+      const data = await resp.json();
+      if(resp.ok && data.init_point){
+        window.location.href = data.init_point; // leva o cliente pro checkout do Mercado Pago
+      } else {
+        showModalMessage(`
+          <h3>NÃO FOI POSSÍVEL INICIAR O PAGAMENTO</h3>
+          <p class="small">Tente novamente em instantes. Se o problema continuar, entre em contato com a loja.</p>
+        `);
+        checkoutBtn.disabled = false;
+        checkoutBtn.textContent = 'FINALIZAR COMPRA';
+      }
+    } catch(err){
+      showModalMessage(`
+        <h3>ERRO DE CONEXÃO</h3>
+        <p class="small">Não conseguimos falar com o servidor de pagamento agora. Tente novamente.</p>
+      `);
+      checkoutBtn.disabled = false;
+      checkoutBtn.textContent = 'FINALIZAR COMPRA';
+    }
+  }
+
+  checkoutBtn.onclick = openShippingModal;
+  document.getElementById('modalClose').onclick = closeModal;
+
+  carregarEstoque();
+  renderCart();
