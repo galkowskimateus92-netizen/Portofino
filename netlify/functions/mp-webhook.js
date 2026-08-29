@@ -46,6 +46,51 @@ async function darBaixaEstoque(items) {
   }
 }
 
+// Envia o e-mail de "recebemos seu pedido" pro comprador, usando a API do Brevo.
+// A BREVO_API_KEY fica só como variável de ambiente na Netlify, nunca aparece no código.
+async function enviarEmailConfirmacao(destinatarioEmail, pedido) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey || !destinatarioEmail) {
+    console.error('Email: BREVO_API_KEY ou e-mail do comprador ausente — e-mail não enviado.');
+    return;
+  }
+
+  const corpoEmail = `
+    <div style="font-family:Arial,sans-serif; max-width:520px; margin:0 auto; color:#0D1B2A;">
+      <h2 style="letter-spacing:2px;">PORTOFINO</h2>
+      <p>Olá!</p>
+      <p>Recebemos o pagamento do seu pedido <strong>${pedido}</strong> e já estamos preparando tudo com carinho. 🧢</p>
+      <p>Assim que o seu boné for despachado, vamos te enviar um novo e-mail com o <strong>código de rastreio</strong> pra você acompanhar a entrega.</p>
+      <p>Qualquer dúvida, é só responder este e-mail.</p>
+      <p style="margin-top:24px;">Obrigado por comprar com a gente!<br>Equipe Portofino</p>
+    </div>
+  `;
+
+  try {
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': apiKey,
+      },
+      body: JSON.stringify({
+        sender: { name: 'Portofino', email: 'companyportofino@gmail.com' },
+        to: [{ email: destinatarioEmail }],
+        subject: `Recebemos seu pedido ${pedido} — Portofino`,
+        htmlContent: corpoEmail,
+      }),
+    });
+    if (!resp.ok) {
+      const erro = await resp.text();
+      console.error('Email: falha ao enviar via Brevo:', erro);
+    } else {
+      console.log(`Email: confirmação enviada para ${destinatarioEmail} (pedido ${pedido})`);
+    }
+  } catch (err) {
+    console.error('Email: erro ao chamar a API do Brevo:', err.message);
+  }
+}
+
 exports.handler = async (event) => {
   // O Mercado Pago pode "testar" a URL com GET — sempre respondemos 200 pra não falhar a validação.
   if (event.httpMethod !== 'POST') {
@@ -97,6 +142,11 @@ exports.handler = async (event) => {
       }
 
       const siteUrl = process.env.URL || `https://${event.headers.host}`;
+      const numeroPedido = payment.external_reference || `#${payment.id}`;
+
+      // Envia o e-mail de "recebemos seu pedido" pro comprador
+      await enviarEmailConfirmacao(payment.payer?.email, numeroPedido);
+
       const formBody = new URLSearchParams({
         'form-name': 'pagamentos-confirmados',
         pedido: payment.external_reference || '(sem número de pedido)',
