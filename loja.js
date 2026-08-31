@@ -536,6 +536,8 @@
     if(tab === 'pedidos') renderPedidosTab(); else renderDadosTab();
   }
 
+  let currentPedidos = [];
+
   async function renderPedidosTab(){
     const el = document.getElementById('accountTabContent');
     el.innerHTML = '<p class="small">Carregando pedidos…</p>';
@@ -543,14 +545,24 @@
       const { data, error } = await supabaseClient
         .from('pedidos').select('*').eq('user_id', currentUser.id).order('criado_em', { ascending:false });
       if(error) throw error;
-      if(!data || data.length === 0){
+
+      // Pedidos pendentes com mais de 1 hora somem da lista (e são apagados de verdade do banco)
+      const umaHoraAtras = Date.now() - 60 * 60 * 1000;
+      const expirados = (data || []).filter(p => p.status === 'pendente' && new Date(p.criado_em).getTime() < umaHoraAtras);
+      if(expirados.length > 0){
+        supabaseClient.from('pedidos').delete().in('id', expirados.map(p => p.id)).then(() => {}).catch(() => {});
+      }
+      const idsExpirados = new Set(expirados.map(p => p.id));
+      currentPedidos = (data || []).filter(p => !idsExpirados.has(p.id));
+
+      if(currentPedidos.length === 0){
         el.innerHTML = '<p class="small">Você ainda não fez nenhum pedido.</p>';
         return;
       }
       const statusLabel = { pendente:'Aguardando pagamento', aprovado:'Pago' };
-      el.innerHTML = data.map(p => `
-        <div class="review-item">
-          <div class="review-name">Pedido ${p.numero_pedido} — ${statusLabel[p.status] || p.status}</div>
+      el.innerHTML = currentPedidos.map(p => `
+        <div class="review-item" ${p.status === 'aprovado' ? `onclick="openPedidoDetail('${p.id}')" style="cursor:pointer;"` : ''}>
+          <div class="review-name">Pedido ${p.numero_pedido} — ${statusLabel[p.status] || p.status}${p.status === 'aprovado' ? ' →' : ''}</div>
           <p class="review-comment">${(p.itens || []).map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
           <p class="review-comment"><strong>${formatPrice(Number(p.total))}</strong> — ${new Date(p.criado_em).toLocaleDateString('pt-BR')}</p>
         </div>
@@ -558,6 +570,28 @@
     }catch(err){
       el.innerHTML = '<p class="small">Não foi possível carregar seus pedidos agora.</p>';
     }
+  }
+
+  function openPedidoDetail(id){
+    const pedido = currentPedidos.find(p => String(p.id) === String(id));
+    if(!pedido) return;
+    const el = document.getElementById('accountTabContent');
+    const itens = pedido.itens || [];
+    el.innerHTML = `
+      <button class="btn outline" style="margin-bottom:18px;" onclick="renderPedidosTab()">← VOLTAR AOS PEDIDOS</button>
+      <div class="review-name" style="font-size:13px;">Pedido ${pedido.numero_pedido} — Pago</div>
+      <p class="small" style="margin-bottom:16px;">${new Date(pedido.criado_em).toLocaleDateString('pt-BR')}</p>
+      ${itens.map(i => `
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:12.5px;">
+          <span>${i.qty}x ${i.name}</span>
+          <span>${formatPrice(i.price * i.qty)}</span>
+        </div>
+      `).join('')}
+      <div style="display:flex; justify-content:space-between; padding-top:12px; font-weight:700; font-size:14px;">
+        <span>Total</span>
+        <span>${formatPrice(Number(pedido.total))}</span>
+      </div>
+    `;
   }
 
   function renderDadosTab(){
