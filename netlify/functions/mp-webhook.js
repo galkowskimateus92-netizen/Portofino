@@ -151,6 +151,17 @@ exports.handler = async (event) => {
       // Envia o e-mail de "recebemos seu pedido" pro comprador
       await enviarEmailConfirmacao(emailComprador, numeroPedido);
 
+      // Marca o pedido como pago no histórico do cliente (só existe se ele comprou logado)
+      if (payment.external_reference) {
+        const { error: pedidoError } = await supabase
+          .from('pedidos')
+          .update({ status: 'aprovado' })
+          .eq('numero_pedido', payment.external_reference);
+        if (pedidoError) {
+          console.error('Pedidos: erro ao atualizar status:', pedidoError.message);
+        }
+      }
+
       const formBody = new URLSearchParams({
         'form-name': 'pagamentos-confirmados',
         pedido: payment.external_reference || '(sem número de pedido)',
