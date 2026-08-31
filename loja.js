@@ -619,51 +619,31 @@
 
   function openShippingModal(){
     if(cart.length === 0) return;
-    document.getElementById('modalBox').classList.add('modal-wide');
+    document.getElementById('modalBox').classList.remove('modal-wide');
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const frete = calcularFrete(subtotal);
     const p = currentProfile || {};
     modalContent.innerHTML = `
-      <h3 style="text-align:left;">FINALIZAR PEDIDO</h3>
-      <div class="checkout-layout">
-        <div class="checkout-form-col">
-          <form id="shippingForm">
-            <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" value="${p.nome || ''}" required></div>
-            <div class="field"><label>CPF</label><input type="text" name="cpf" value="${p.cpf || ''}" required></div>
-            <div class="field"><label>E-MAIL</label><input type="email" name="email" value="${currentUser?.email || ''}" required></div>
-            <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" value="${p.telefone || ''}" required></div>
-            <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInput" value="${p.cep || ''}" placeholder="00000-000" required></div>
-            <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInput" value="${p.endereco || ''}" required></div>
-            <div style="display:flex; gap:10px;">
-              <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" value="${p.numero || ''}" required></div>
-              <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento" value="${p.complemento || ''}"></div>
-            </div>
-            <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInput" value="${p.bairro || ''}" required></div>
-            <div style="display:flex; gap:10px;">
-              <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" value="${p.cidade || ''}" required></div>
-              <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" value="${p.estado || ''}" required></div>
-            </div>
-            <button type="submit" class="btn" style="width:100%; margin-top:8px;">IR PARA O PAGAMENTO</button>
-          </form>
+      <h3>DADOS PARA ENTREGA</h3>
+      <p class="small">Subtotal: ${formatPrice(subtotal)} + Frete: ${frete === 0 ? 'Grátis' : formatPrice(frete)} = <strong>${formatPrice(subtotal + frete)}</strong></p>
+      <form id="shippingForm">
+        <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" value="${p.nome || ''}" required></div>
+        <div class="field"><label>CPF</label><input type="text" name="cpf" value="${p.cpf || ''}" required></div>
+        <div class="field"><label>E-MAIL</label><input type="email" name="email" value="${currentUser?.email || ''}" required></div>
+        <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" value="${p.telefone || ''}" required></div>
+        <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInput" value="${p.cep || ''}" placeholder="00000-000" required></div>
+        <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInput" value="${p.endereco || ''}" required></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" value="${p.numero || ''}" required></div>
+          <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento" value="${p.complemento || ''}"></div>
         </div>
-        <div class="checkout-summary-col">
-          ${cart.map(item => `
-            <div class="checkout-item">
-              ${capSVG(item, 46)}
-              <div class="checkout-item-info">
-                <div class="checkout-item-name">${item.name}</div>
-                <div class="checkout-item-qty">Qtd: ${item.qty}</div>
-              </div>
-              <div class="checkout-item-price">${formatPrice(item.price * item.qty)}</div>
-            </div>
-          `).join('')}
-          <div class="checkout-totals">
-            <div class="subtotal-row"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>
-            <div class="subtotal-row"><span>Frete</span><span>${frete === 0 ? 'Grátis' : formatPrice(frete)}</span></div>
-            <div class="subtotal-row total"><span>Total</span><span>${formatPrice(subtotal + frete)}</span></div>
-          </div>
+        <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInput" value="${p.bairro || ''}" required></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" value="${p.cidade || ''}" required></div>
+          <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" value="${p.estado || ''}" required></div>
         </div>
-      </div>
+        <button type="submit" class="btn" style="width:100%; margin-top:8px;">IR PARA O PAGAMENTO</button>
+      </form>
     `;
     modalOverlay.classList.add('show');
     document.getElementById('cepInput').addEventListener('blur', lookupCep);
