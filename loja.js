@@ -4,7 +4,7 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-    { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:1.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+    { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:109.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
     { id:2, name:"Boné Portofino Verde", desc:"Algodão premium · âncora bordada", price:109.90, color:"#1B3D2D", brim:"#132a20", patch:"#CDBA9A" },
     { id:6, name:"Boné Portofino Branco", desc:"Algodão leve · verão", price:109.90, color:"#F2EFE6", brim:"#ddd6c4", patch:"#0D1B2A" },
   ];
@@ -349,28 +349,241 @@
     modalOverlay.classList.add('show');
   }
 
+  // ===== CONTA DO CLIENTE (login/cadastro) =====
+  let currentUser = null;
+  let currentProfile = null;
+
+  async function initAuth(){
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    currentUser = session?.user || null;
+    if(currentUser) await loadProfile();
+    updateAuthUI();
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+      currentUser = session?.user || null;
+      if(currentUser) await loadProfile(); else currentProfile = null;
+      updateAuthUI();
+    });
+  }
+
+  async function loadProfile(){
+    if(!currentUser) return;
+    try{
+      const { data, error } = await supabaseClient.from('perfis').select('*').eq('user_id', currentUser.id).maybeSingle();
+      if(error) throw error;
+      currentProfile = data || null;
+    }catch(err){
+      console.error('Conta: erro ao carregar perfil', err);
+    }
+  }
+
+  function updateAuthUI(){
+    const btn = document.getElementById('accountBtn');
+    if(!btn) return;
+    btn.textContent = currentUser ? '👤 MINHA CONTA' : '👤 ENTRAR';
+  }
+
+  function openAccountModal(){
+    document.getElementById('modalBox').classList.remove('modal-wide');
+    if(currentUser){ renderAccountLogged(); }
+    else { renderAuthForm('login'); }
+    modalOverlay.classList.add('show');
+  }
+
+  function renderAuthForm(mode){
+    const isLogin = mode === 'login';
+    modalContent.innerHTML = `
+      <h3>${isLogin ? 'ENTRAR' : 'CRIAR CONTA'}</h3>
+      <form id="authForm">
+        ${!isLogin ? `<div class="field"><label>NOME</label><input type="text" name="nome" required></div>` : ''}
+        <div class="field"><label>E-MAIL</label><input type="email" name="email" required></div>
+        <div class="field"><label>SENHA</label><input type="password" name="senha" minlength="6" required></div>
+        <p class="review-msg" id="authMsg"></p>
+        <button type="submit" class="btn" style="width:100%;">${isLogin ? 'ENTRAR' : 'CRIAR CONTA'}</button>
+      </form>
+      <p class="small" style="text-align:center; margin-top:16px;">
+        ${isLogin ? 'Não tem conta?' : 'Já tem conta?'}
+        <a href="#" onclick="renderAuthForm('${isLogin ? 'signup' : 'login'}'); return false;" style="text-decoration:underline;">${isLogin ? 'Criar conta' : 'Entrar'}</a>
+      </p>
+    `;
+    document.getElementById('authForm').onsubmit = isLogin ? handleLogin : handleSignup;
+  }
+
+  async function handleLogin(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = e.target.querySelector('button[type=submit]');
+    const msg = document.getElementById('authMsg');
+    btn.disabled = true; btn.textContent = 'ENTRANDO...';
+    msg.textContent = ''; msg.className = 'review-msg';
+    try{
+      const { error } = await supabaseClient.auth.signInWithPassword({
+        email: fd.get('email'), password: fd.get('senha')
+      });
+      if(error) throw error;
+      closeModal();
+    }catch(err){
+      msg.textContent = 'E-mail ou senha incorretos.';
+      msg.className = 'review-msg error';
+      btn.disabled = false; btn.textContent = 'ENTRAR';
+    }
+  }
+
+  async function handleSignup(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = e.target.querySelector('button[type=submit]');
+    const msg = document.getElementById('authMsg');
+    btn.disabled = true; btn.textContent = 'CRIANDO...';
+    msg.textContent = ''; msg.className = 'review-msg';
+    try{
+      const { data, error } = await supabaseClient.auth.signUp({
+        email: fd.get('email'), password: fd.get('senha'),
+        options: { data: { nome: fd.get('nome') } }
+      });
+      if(error) throw error;
+      if(data.session){
+        closeModal();
+      } else {
+        msg.textContent = 'Conta criada! Verifique seu e-mail pra confirmar antes de entrar.';
+        msg.className = 'review-msg success';
+        btn.disabled = false; btn.textContent = 'CRIAR CONTA';
+      }
+    }catch(err){
+      msg.textContent = err.message.includes('already registered') ? 'Esse e-mail já tem uma conta.' : 'Não foi possível criar a conta agora.';
+      msg.className = 'review-msg error';
+      btn.disabled = false; btn.textContent = 'CRIAR CONTA';
+    }
+  }
+
+  async function handleLogout(){
+    await supabaseClient.auth.signOut();
+    closeModal();
+  }
+
+  function renderAccountLogged(){
+    modalContent.innerHTML = `
+      <h3>MINHA CONTA</h3>
+      <div class="account-tabs">
+        <button class="account-tab active" id="tabPedidos" onclick="switchAccountTab('pedidos')">MEUS PEDIDOS</button>
+        <button class="account-tab" id="tabDados" onclick="switchAccountTab('dados')">MEUS DADOS</button>
+      </div>
+      <div id="accountTabContent"></div>
+      <button class="btn outline" style="width:100%; margin-top:18px;" onclick="handleLogout()">SAIR DA CONTA</button>
+    `;
+    switchAccountTab('pedidos');
+  }
+
+  function switchAccountTab(tab){
+    document.getElementById('tabPedidos').classList.toggle('active', tab === 'pedidos');
+    document.getElementById('tabDados').classList.toggle('active', tab === 'dados');
+    if(tab === 'pedidos') renderPedidosTab(); else renderDadosTab();
+  }
+
+  async function renderPedidosTab(){
+    const el = document.getElementById('accountTabContent');
+    el.innerHTML = '<p class="small">Carregando pedidos…</p>';
+    try{
+      const { data, error } = await supabaseClient
+        .from('pedidos').select('*').eq('user_id', currentUser.id).order('criado_em', { ascending:false });
+      if(error) throw error;
+      if(!data || data.length === 0){
+        el.innerHTML = '<p class="small">Você ainda não fez nenhum pedido.</p>';
+        return;
+      }
+      const statusLabel = { pendente:'Aguardando pagamento', aprovado:'Pago' };
+      el.innerHTML = data.map(p => `
+        <div class="review-item">
+          <div class="review-name">Pedido ${p.numero_pedido} — ${statusLabel[p.status] || p.status}</div>
+          <p class="review-comment">${(p.itens || []).map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
+          <p class="review-comment"><strong>${formatPrice(Number(p.total))}</strong> — ${new Date(p.criado_em).toLocaleDateString('pt-BR')}</p>
+        </div>
+      `).join('');
+    }catch(err){
+      el.innerHTML = '<p class="small">Não foi possível carregar seus pedidos agora.</p>';
+    }
+  }
+
+  function renderDadosTab(){
+    const el = document.getElementById('accountTabContent');
+    const p = currentProfile || {};
+    el.innerHTML = `
+      <form id="perfilForm">
+        <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" value="${p.nome || ''}" required></div>
+        <div class="field"><label>CPF</label><input type="text" name="cpf" value="${p.cpf || ''}"></div>
+        <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" value="${p.telefone || ''}"></div>
+        <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInputPerfil" value="${p.cep || ''}"></div>
+        <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInputPerfil" value="${p.endereco || ''}"></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" value="${p.numero || ''}"></div>
+          <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento" value="${p.complemento || ''}"></div>
+        </div>
+        <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInputPerfil" value="${p.bairro || ''}"></div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInputPerfil" value="${p.cidade || ''}"></div>
+          <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInputPerfil" maxlength="2" value="${p.estado || ''}"></div>
+        </div>
+        <p class="review-msg" id="perfilMsg"></p>
+        <button type="submit" class="btn" style="width:100%;">SALVAR DADOS</button>
+      </form>
+    `;
+    document.getElementById('cepInputPerfil').addEventListener('blur', (e) => lookupCep(e, 'Perfil'));
+    document.getElementById('perfilForm').onsubmit = handleSalvarPerfil;
+  }
+
+  async function handleSalvarPerfil(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = e.target.querySelector('button[type=submit]');
+    const msg = document.getElementById('perfilMsg');
+    btn.disabled = true; btn.textContent = 'SALVANDO...';
+    const dados = {
+      user_id: currentUser.id,
+      nome: fd.get('nome'), cpf: fd.get('cpf'), telefone: fd.get('telefone'),
+      cep: fd.get('cep'), endereco: fd.get('endereco'), numero: fd.get('numero'),
+      complemento: fd.get('complemento'), bairro: fd.get('bairro'),
+      cidade: fd.get('cidade'), estado: fd.get('estado'),
+    };
+    try{
+      const { error } = await supabaseClient.from('perfis').upsert(dados);
+      if(error) throw error;
+      currentProfile = dados;
+      msg.textContent = 'Dados salvos!';
+      msg.className = 'review-msg success';
+    }catch(err){
+      msg.textContent = 'Não foi possível salvar agora.';
+      msg.className = 'review-msg error';
+    }finally{
+      btn.disabled = false; btn.textContent = 'SALVAR DADOS';
+    }
+  }
+
+  document.getElementById('accountBtn')?.addEventListener('click', openAccountModal);
+  initAuth();
+
   function openShippingModal(){
     if(cart.length === 0) return;
+    document.getElementById('modalBox').classList.remove('modal-wide');
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const frete = calcularFrete(subtotal);
+    const p = currentProfile || {};
     modalContent.innerHTML = `
       <h3>DADOS PARA ENTREGA</h3>
       <p class="small">Subtotal: ${formatPrice(subtotal)} + Frete: ${frete === 0 ? 'Grátis' : formatPrice(frete)} = <strong>${formatPrice(subtotal + frete)}</strong></p>
       <form id="shippingForm">
-        <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" required></div>
-        <div class="field"><label>CPF</label><input type="text" name="cpf" required></div>
-        <div class="field"><label>E-MAIL</label><input type="email" name="email" required></div>
-        <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" required></div>
-        <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInput" placeholder="00000-000" required></div>
-        <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInput" required></div>
+        <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" value="${p.nome || ''}" required></div>
+        <div class="field"><label>CPF</label><input type="text" name="cpf" value="${p.cpf || ''}" required></div>
+        <div class="field"><label>E-MAIL</label><input type="email" name="email" value="${currentUser?.email || ''}" required></div>
+        <div class="field"><label>TELEFONE</label><input type="tel" name="telefone" value="${p.telefone || ''}" required></div>
+        <div class="field"><label>CEP</label><input type="text" name="cep" id="cepInput" value="${p.cep || ''}" placeholder="00000-000" required></div>
+        <div class="field"><label>ENDEREÇO</label><input type="text" name="endereco" id="enderecoInput" value="${p.endereco || ''}" required></div>
         <div style="display:flex; gap:10px;">
-          <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" required></div>
-          <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento"></div>
+          <div class="field" style="flex:1;"><label>NÚMERO</label><input type="text" name="numero" value="${p.numero || ''}" required></div>
+          <div class="field" style="flex:2;"><label>COMPLEMENTO</label><input type="text" name="complemento" value="${p.complemento || ''}"></div>
         </div>
-        <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInput" required></div>
+        <div class="field"><label>BAIRRO</label><input type="text" name="bairro" id="bairroInput" value="${p.bairro || ''}" required></div>
         <div style="display:flex; gap:10px;">
-          <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" required></div>
-          <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" required></div>
+          <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" value="${p.cidade || ''}" required></div>
+          <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" value="${p.estado || ''}" required></div>
         </div>
         <button type="submit" class="btn" style="width:100%; margin-top:8px;">IR PARA O PAGAMENTO</button>
       </form>
@@ -381,17 +594,18 @@
   }
 
   // Busca o endereço automaticamente a partir do CEP (API pública ViaCEP)
-  async function lookupCep(e){
+  async function lookupCep(e, suffix){
+    suffix = suffix || '';
     const cep = e.target.value.replace(/\D/g,'');
     if(cep.length !== 8) return;
     try{
       const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await resp.json();
       if(!data.erro){
-        document.getElementById('enderecoInput').value = data.logradouro || '';
-        document.getElementById('bairroInput').value = data.bairro || '';
-        document.getElementById('cidadeInput').value = data.localidade || '';
-        document.getElementById('estadoInput').value = data.uf || '';
+        document.getElementById(`endereco${suffix ? 'Input'+suffix : 'Input'}`).value = data.logradouro || '';
+        document.getElementById(`bairro${suffix ? 'Input'+suffix : 'Input'}`).value = data.bairro || '';
+        document.getElementById(`cidade${suffix ? 'Input'+suffix : 'Input'}`).value = data.localidade || '';
+        document.getElementById(`estado${suffix ? 'Input'+suffix : 'Input'}`).value = data.uf || '';
       }
     }catch(err){ /* se a busca falhar, o cliente preenche na mão mesmo */ }
   }
@@ -437,6 +651,31 @@
       });
     }catch(err){
       // mesmo que o registro falhe, seguimos pro pagamento — não trava a venda
+    }
+
+    // Se o cliente estiver logado: salva o endereço pra próxima compra e registra no histórico de pedidos
+    if(currentUser){
+      const dadosPerfil = {
+        user_id: currentUser.id,
+        nome: fd.get('nome'), cpf: fd.get('cpf'), telefone: fd.get('telefone'),
+        cep: fd.get('cep'), endereco: fd.get('endereco'), numero: fd.get('numero'),
+        complemento: fd.get('complemento') || '', bairro: fd.get('bairro'),
+        cidade: fd.get('cidade'), estado: fd.get('estado'),
+      };
+      try{
+        await supabaseClient.from('perfis').upsert(dadosPerfil);
+        currentProfile = dadosPerfil;
+      }catch(err){ /* não trava a compra se isso falhar */ }
+
+      try{
+        await supabaseClient.from('pedidos').insert({
+          user_id: currentUser.id,
+          numero_pedido: orderNumber,
+          itens: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
+          total: subtotal + frete,
+          status: 'pendente',
+        });
+      }catch(err){ /* não trava a compra se isso falhar */ }
     }
 
     startCheckout(orderNumber, payer, frete);

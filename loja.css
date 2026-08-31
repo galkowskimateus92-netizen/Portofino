@@ -184,6 +184,15 @@
   .review-msg{ font-size:12px; min-height:16px; }
   .review-msg.success{ color:#2f6b3a; }
   .review-msg.error{ color:#a13a3a; }
+
+  /* MINHA CONTA */
+  .account-tabs{ display:flex; gap:0; border-bottom:1px solid var(--line); margin-bottom:18px; }
+  .account-tab{
+    flex:1; background:none; border:none; padding:10px 0; cursor:pointer;
+    font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:1px; font-weight:600; opacity:0.5;
+    border-bottom:2px solid transparent;
+  }
+  .account-tab.active{ opacity:1; color:var(--gold); border-bottom-color:var(--gold); }
   .pp-tambem{ margin-top:40px; }
   .pp-tambem > span{ font-size:11px; letter-spacing:1.5px; font-weight:600; color:var(--gold); display:block; margin-bottom:16px; }
   .pp-tambem-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
