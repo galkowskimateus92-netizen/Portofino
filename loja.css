@@ -100,11 +100,14 @@
     text-align:center; padding:30px;
     background:rgba(13,27,42,0.28);
     color:#fff;
+    opacity:0; transition:opacity .3s ease;
   }
+  .cat-hero-panel:hover .cat-hero-overlay{ opacity:1; }
   .cat-hero-title{ font-family:'Cinzel',serif; font-size:30px; letter-spacing:8px; margin-bottom:10px; }
   .cat-hero-link{ font-size:11px; letter-spacing:2px; font-weight:600; text-decoration:underline; text-underline-offset:4px; }
   @media(max-width:900px){
     .cat-hero-panel{ height:300px; }
+    .cat-hero-overlay{ opacity:1; background:rgba(13,27,42,0.35); }
   }
 
   /* HERO */
