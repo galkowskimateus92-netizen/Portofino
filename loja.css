@@ -50,18 +50,20 @@
   .nav-links{ display:flex; gap:34px; font-size:12px; letter-spacing:1.5px; font-weight:500; }
   .nav-links a{ opacity:0.8; transition:opacity .2s; }
   .nav-links a:hover{ opacity:1; }
-  .nav-right{ display:flex; align-items:center; gap:20px; }
-  .cart-btn{
-    position:relative; display:flex; align-items:center; gap:8px;
-    background:var(--navy); color:var(--cream); border:none;
-    padding:10px 16px; border-radius:var(--radius); cursor:pointer;
-    font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:1.5px; font-weight:600;
+  .nav-right{ display:flex; align-items:center; gap:18px; }
+  .icon-btn{
+    background:none; border:none; cursor:pointer; color:var(--navy); padding:4px;
+    display:flex; align-items:center; justify-content:center; position:relative;
+    transition:opacity .15s;
   }
-  .cart-count{
-    background:var(--gold); color:var(--navy); font-size:10px; font-weight:700;
-    min-width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  .icon-btn:hover{ opacity:0.6; }
+  .cart-badge{
+    position:absolute; top:-5px; right:-7px; background:var(--gold); color:var(--navy);
+    font-size:9px; font-weight:700; min-width:15px; height:15px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; line-height:1;
   }
-  .burger{ display:none; background:none; border:none; font-size:22px; cursor:pointer; color:var(--navy); }
+  .icon-btn.logged-in svg{ color:var(--gold); }
+  .burger{ display:none; }
   .mobile-menu{
     display:none; flex-direction:column; background:var(--cream); border-top:1px solid var(--line);
     padding:8px 28px 18px;
@@ -71,6 +73,38 @@
     font-family:'Montserrat',sans-serif; font-weight:500;
   }
   .mobile-menu.open{ display:flex; }
+
+  /* BARRA DE BUSCA */
+  .search-bar{
+    display:none; align-items:center; gap:10px; max-width:1180px; margin:0 auto;
+    padding:0 28px 16px; color:var(--navy); opacity:0.8;
+  }
+  .search-bar.open{ display:flex; }
+  .search-bar input{
+    flex:1; border:none; border-bottom:1px solid var(--line); background:none;
+    font-family:'Montserrat',sans-serif; font-size:13px; padding:6px 2px; outline:none;
+  }
+  .search-bar button{ background:none; border:none; cursor:pointer; font-size:13px; color:var(--navy); opacity:0.6; }
+
+  /* CATEGORY HERO (banner clicável "BONÉS") */
+  .cat-hero{ padding:0; }
+  .cat-hero-panel{
+    display:block; position:relative; height:420px; overflow:hidden; background:var(--cream-2);
+  }
+  .cat-hero-panel img.cat-hero-bg{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform .5s ease;
+  }
+  .cat-hero-panel:hover img.cat-hero-bg{ transform:scale(1.04); }
+  .cat-hero-overlay{
+    position:absolute; left:0; right:0; bottom:0; padding:30px 36px;
+    background:linear-gradient(0deg, rgba(13,27,42,0.55) 0%, rgba(13,27,42,0) 65%);
+    color:#fff;
+  }
+  .cat-hero-title{ font-family:'Cinzel',serif; font-size:24px; letter-spacing:6px; margin-bottom:8px; }
+  .cat-hero-link{ font-size:11px; letter-spacing:2px; font-weight:600; text-decoration:underline; text-underline-offset:4px; }
+  @media(max-width:900px){
+    .cat-hero-panel{ height:300px; }
+  }
 
   /* HERO */
   .hero{
@@ -290,7 +324,7 @@
 
   @media(max-width:900px){
     .nav-links{ display:none; }
-    .burger{ display:block; }
+    .burger{ display:flex; }
     .hero{ grid-template-columns:1fr; padding:30px 0; }
     .hero-side{ display:none; }
     .hero-center h1{ font-size:38px; letter-spacing:5px; }

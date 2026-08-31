@@ -4,7 +4,7 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-    { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:1.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+    { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:109.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
     { id:2, name:"Boné Portofino Verde", desc:"Algodão premium · âncora bordada", price:109.90, color:"#1B3D2D", brim:"#132a20", patch:"#CDBA9A" },
     { id:6, name:"Boné Portofino Branco", desc:"Algodão leve · verão", price:109.90, color:"#F2EFE6", brim:"#ddd6c4", patch:"#0D1B2A" },
   ];
@@ -62,9 +62,21 @@
     </div>`;
   }
 
+  let searchTerm = '';
+
   function renderProducts(){
     const grid = document.getElementById('productGrid');
-    grid.innerHTML = products.map(p => {
+    const termo = searchTerm.trim().toLowerCase();
+    const filtrados = termo
+      ? products.filter(p => p.name.toLowerCase().includes(termo) || p.desc.toLowerCase().includes(termo))
+      : products;
+
+    if(filtrados.length === 0){
+      grid.innerHTML = `<p class="small" style="grid-column:1/-1; text-align:center; padding:40px 0;">Nenhum boné encontrado pra "${escapeHTML(searchTerm)}".</p>`;
+      return;
+    }
+
+    grid.innerHTML = filtrados.map(p => {
       const estoque = estoqueDe(p.id);
       const esgotado = estoque !== null && estoque <= 0;
       const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
@@ -322,6 +334,47 @@
     document.getElementById('mobileMenu').classList.remove('open');
   }
 
+  // ===== BUSCA =====
+  function toggleSearchBar(){
+    const bar = document.getElementById('searchBar');
+    if(!bar) return;
+    bar.classList.toggle('open');
+    if(bar.classList.contains('open')) document.getElementById('searchInput').focus();
+  }
+  function closeSearchBar(){
+    document.getElementById('searchBar')?.classList.remove('open');
+  }
+  function handleSearchInput(e){
+    searchTerm = e.target.value;
+    if(document.getElementById('productGrid')) renderProducts();
+  }
+  function handleSearchKeydown(e){
+    if(e.key !== 'Enter') return;
+    // Na home (sem grid de produtos), a busca leva pra Coleção já filtrada
+    if(!document.getElementById('productGrid')){
+      window.location.href = `colecao.html?q=${encodeURIComponent(e.target.value)}`;
+    }
+  }
+  (function initSearchUI(){
+    const input = document.getElementById('searchInput');
+    const toggleBtn = document.getElementById('searchToggleBtn');
+    const closeBtn = document.getElementById('searchCloseBtn');
+    if(toggleBtn) toggleBtn.addEventListener('click', toggleSearchBar);
+    if(closeBtn) closeBtn.addEventListener('click', closeSearchBar);
+    if(input){
+      input.addEventListener('input', handleSearchInput);
+      input.addEventListener('keydown', handleSearchKeydown);
+      // Se veio de uma busca da home (?q=...), já abre com o termo preenchido
+      const params = new URLSearchParams(window.location.search);
+      const termoInicial = params.get('q');
+      if(termoInicial){
+        input.value = termoInicial;
+        searchTerm = termoInicial;
+        document.getElementById('searchBar')?.classList.add('open');
+      }
+    }
+  })();
+
   function closeModal(){ modalOverlay.classList.remove('show'); }
 
   const infoContent = {
@@ -379,7 +432,8 @@
   function updateAuthUI(){
     const btn = document.getElementById('accountBtn');
     if(!btn) return;
-    btn.textContent = currentUser ? '👤 MINHA CONTA' : '👤 ENTRAR';
+    btn.title = currentUser ? 'Minha conta' : 'Entrar';
+    btn.classList.toggle('logged-in', !!currentUser);
   }
 
   function openAccountModal(){
