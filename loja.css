@@ -63,7 +63,7 @@
     display:flex; align-items:center; justify-content:center; line-height:1;
   }
   .icon-btn.logged-in svg{ color:var(--gold); }
-  .burger{ display:none; }
+  .burger{ display:flex; }
   .mobile-menu{
     display:none; flex-direction:column; background:var(--cream); border-top:1px solid var(--line);
     padding:8px 28px 18px;
