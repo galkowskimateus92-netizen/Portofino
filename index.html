@@ -43,37 +43,26 @@
 
 <header>
   <div class="nav">
-    <button class="icon-btn burger" onclick="toggleMobileMenu()" aria-label="Menu">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
+    <button class="burger" onclick="toggleMobileMenu()">☰</button>
     <a class="logo" href="index.html">
       <div class="name">PORTOFINO</div>
       <div class="sub">ITALIAN RIVIERA</div>
     </a>
+    <div class="nav-links">
+      <a href="colecao.html">Coleção</a>
+      <a href="#sobre">Sobre</a>
+      <a href="#contato">Contato</a>
+    </div>
     <div class="nav-right">
-      <button class="icon-btn" id="accountBtn" aria-label="Minha conta" title="Entrar">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
-      </button>
-      <button class="icon-btn" id="searchToggleBtn" aria-label="Buscar">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </button>
-      <button class="icon-btn" id="cartOpenBtn" aria-label="Carrinho">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
-        <span class="cart-badge" id="cartCount">0</span>
+      <button class="cart-btn" id="cartOpenBtn">
+        ⚓ CARRINHO <span class="cart-count" id="cartCount">0</span>
       </button>
     </div>
   </div>
-  <div class="search-bar" id="searchBar">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="searchInput" placeholder="Buscar bonés...">
-    <button id="searchCloseBtn" aria-label="Fechar busca">✕</button>
-  </div>
   <div class="mobile-menu" id="mobileMenu">
-    <a href="index.html" onclick="closeMobileMenu()">Início</a>
     <a href="colecao.html" onclick="closeMobileMenu()">Coleção</a>
     <a href="#sobre" onclick="closeMobileMenu()">Sobre</a>
     <a href="#contato" onclick="closeMobileMenu()">Contato</a>
-    <a href="#" onclick="closeMobileMenu(); openAccountModal(); return false;">Minha Conta</a>
   </div>
 </header>
 
@@ -86,16 +75,6 @@
     <a href="colecao.html" class="btn">VER COLEÇÃO</a>
   </div>
   <div class="hero-side right"></div>
-</section>
-
-<section class="cat-hero">
-  <a class="cat-hero-panel" href="colecao.html">
-    <img class="cat-hero-bg" src="portofino-hero-direita.jpg" alt="Bonés Portofino">
-    <div class="cat-hero-overlay">
-      <div class="cat-hero-title">BONÉS</div>
-      <div class="cat-hero-link">EXPLORAR →</div>
-    </div>
-  </a>
 </section>
 
 <section class="about" id="sobre" style="max-width:1180px; margin:0 auto; padding:70px 28px;">
@@ -115,6 +94,7 @@
     </div>
     <a href="colecao.html" class="btn outline" style="margin-top:30px; display:inline-block;">VER COLEÇÃO COMPLETA</a>
   </div>
+</section>
 </section>
 
 <section class="newsletter" id="contato">
