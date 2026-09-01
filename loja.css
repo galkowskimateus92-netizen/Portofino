@@ -154,7 +154,7 @@
 
   /* PRODUCTS */
   .products{ background:var(--cream-2); }
-  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:30px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 340px)); justify-content:center; gap:30px; }
   .card{ background:var(--cream); border:1px solid var(--line); padding:30px 24px 26px; text-align:center; transition:.25s; }
   .card:hover{ box-shadow:0 14px 30px rgba(13,27,42,0.08); transform:translateY(-3px); }
   .card .cap{ margin-bottom:22px; }
@@ -332,7 +332,6 @@
     .hero{ grid-template-columns:1fr; padding:30px 0; }
     .hero-side{ display:none; }
     .hero-center h1{ font-size:38px; letter-spacing:5px; }
-    .grid{ grid-template-columns:repeat(2,1fr); }
     .about{ grid-template-columns:1fr; }
     .foot-grid{ grid-template-columns:1fr 1fr; }
   }
