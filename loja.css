@@ -1,4 +1,4 @@
-  :root{
+:root{
     --cream:#F6F4EE;
     --cream-2:#EFEADD;
     --navy:#0D1B2A;
@@ -40,14 +40,16 @@
     border-bottom:1px solid var(--line);
   }
   .nav{
-    display:flex; align-items:center; justify-content:space-between;
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
     padding:16px 28px; position:relative;
     max-width:1180px; margin:0 auto;
   }
-  .logo{ text-align:center; line-height:1; }
+  .logo{ text-align:center; line-height:1; justify-self:center; }
   .nav .logo{
-    position:absolute; left:50%; top:50%; transform:translate(-50%, -50%);
+    grid-column:2;
   }
+  .nav .burger{ justify-self:start; }
+  .nav .nav-right{ justify-self:end; }
   .logo .name{ font-family:'Cinzel',serif; font-size:22px; letter-spacing:5px; }
   .logo .sub{ font-size:8px; letter-spacing:3px; color:var(--gold); margin-top:3px; }
   .nav-right{ display:flex; align-items:center; gap:18px; }
