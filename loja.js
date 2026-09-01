@@ -4,10 +4,8 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-    { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:109.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
-    { id:2, name:"Boné Portofino Verde", desc:"Algodão premium · âncora bordada", price:109.90, color:"#1B3D2D", brim:"#132a20", patch:"#CDBA9A" },
-    { id:6, name:"Boné Portofino Branco", desc:"Algodão leve · verão", price:109.90, color:"#F2EFE6", brim:"#ddd6c4", patch:"#0D1B2A" },
-  ];
+  { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+];
 
   // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
   // assume-se disponível (null = "ainda não sei"), pra não travar a loja
