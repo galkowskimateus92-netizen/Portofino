@@ -1,0 +1,232 @@
+/* ==========================================================
+   ANIMATIONS.CSS — camada de animação da Portofino
+   Não altera cores, textos, layout ou funcionalidade.
+   Só adiciona movimento por cima do que já existe.
+   ========================================================== */
+
+/* Respeita quem prefere menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Fade geral de entrada da página ---------- */
+body { opacity: 0; }
+body.pf-loaded {
+  opacity: 1;
+  animation: pfBodyFade .5s ease both;
+}
+@keyframes pfBodyFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---------- Barra de anúncio: leve slide de cima ---------- */
+.announce {
+  animation: pfSlideDown .5s ease both;
+}
+@keyframes pfSlideDown {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ---------- Header ---------- */
+header { animation: pfFadeIn .6s ease .1s both; }
+@keyframes pfFadeIn { from{opacity:0;} to{opacity:1;} }
+
+.logo .name, .logo .sub { transition: letter-spacing .35s ease, color .3s ease; }
+.logo:hover .name { letter-spacing: 6px; }
+
+.icon-btn { transition: transform .25s ease, opacity .15s ease; }
+.icon-btn:hover { transform: translateY(-2px) scale(1.08); }
+.icon-btn:active { transform: scale(0.92); }
+
+.cart-badge { transition: transform .25s ease; }
+.cart-badge.pf-bump { animation: pfBump .35s ease; }
+@keyframes pfBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+.mobile-menu.open a {
+  animation: pfSlideInLeft .35s ease both;
+}
+.mobile-menu.open a:nth-child(1){ animation-delay:.02s; }
+.mobile-menu.open a:nth-child(2){ animation-delay:.07s; }
+.mobile-menu.open a:nth-child(3){ animation-delay:.12s; }
+.mobile-menu.open a:nth-child(4){ animation-delay:.17s; }
+.mobile-menu.open a:nth-child(5){ animation-delay:.22s; }
+@keyframes pfSlideInLeft {
+  from { opacity:0; transform: translateX(-12px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+.search-bar.open input { animation: pfFadeIn .3s ease both; }
+
+/* ---------- Hero ---------- */
+.hero-side.left  { animation: pfHeroSlideL .9s cubic-bezier(.22,.61,.36,1) both; }
+.hero-side.right { animation: pfHeroSlideR .9s cubic-bezier(.22,.61,.36,1) both; }
+@keyframes pfHeroSlideL { from{ opacity:0; transform: translateX(-40px) scale(1.05);} to{opacity:1; transform:translateX(0) scale(1);} }
+@keyframes pfHeroSlideR { from{ opacity:0; transform: translateX(40px) scale(1.05);} to{opacity:1; transform:translateX(0) scale(1);} }
+
+.hero-side { transition: transform 6s ease; }
+.hero:hover .hero-side.left  { transform: scale(1.04); }
+.hero:hover .hero-side.right { transform: scale(1.04); }
+
+.hero-center h1 {
+  animation: pfRiseIn .8s .15s cubic-bezier(.22,.61,.36,1) both;
+}
+.hero-center .sub {
+  animation: pfRiseIn .8s .3s cubic-bezier(.22,.61,.36,1) both;
+}
+.hero-center p.tag {
+  animation: pfRiseIn .8s .45s cubic-bezier(.22,.61,.36,1) both;
+}
+.hero-center .btn {
+  animation: pfRiseIn .8s .6s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes pfRiseIn {
+  from { opacity:0; transform: translateY(18px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+/* ---------- Botões ---------- */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: background .2s ease, color .2s ease, transform .15s ease, box-shadow .25s ease;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(13,27,42,0.16); }
+.btn:active { transform: translateY(0) scale(0.98); }
+.btn::after{
+  content:""; position:absolute; inset:0; border-radius:inherit;
+  background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 60%);
+  opacity:0; transform: scale(0.4);
+  transition: opacity .5s ease, transform .5s ease;
+  pointer-events:none;
+}
+.btn:hover::after{ opacity:1; transform: scale(1.4); }
+
+/* ---------- Category hero banner ---------- */
+.cat-hero-panel img.cat-hero-bg{ transition: transform .7s cubic-bezier(.22,.61,.36,1); }
+.cat-hero-overlay{ transition: opacity .35s ease; }
+.cat-hero-title{ transition: transform .4s ease; }
+.cat-hero-panel:hover .cat-hero-title{ transform: translateY(-4px); }
+
+/* ---------- Reveal ao rolar a página ---------- */
+[data-reveal]{
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1);
+}
+[data-reveal].pf-in{
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-reveal="zoom"]{ transform: scale(0.94); }
+[data-reveal="zoom"].pf-in{ transform: scale(1); }
+[data-reveal="left"]{ transform: translateX(-30px); }
+[data-reveal="left"].pf-in{ transform: translateX(0); }
+[data-reveal="right"]{ transform: translateX(30px); }
+[data-reveal="right"].pf-in{ transform: translateX(0); }
+
+/* atraso escalonado pra grupos (usar data-reveal-group nos filhos) */
+[data-reveal-delay="1"]{ transition-delay: .08s; }
+[data-reveal-delay="2"]{ transition-delay: .16s; }
+[data-reveal-delay="3"]{ transition-delay: .24s; }
+[data-reveal-delay="4"]{ transition-delay: .32s; }
+
+/* ---------- Section headings ---------- */
+.section-head .eyebrow{ display:inline-block; }
+.section-head.pf-in .eyebrow{ animation: pfRiseIn .6s ease both; }
+.section-head.pf-in h2{ animation: pfRiseIn .6s .1s ease both; }
+.section-head.pf-in p{ animation: pfRiseIn .6s .2s ease both; }
+
+/* ---------- Product cards (injetados via JS) ---------- */
+.card{
+  transition: transform .3s cubic-bezier(.22,.61,.36,1), box-shadow .3s ease, opacity .5s ease;
+}
+.card.pf-card-in{
+  animation: pfCardIn .55s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes pfCardIn{
+  from{ opacity:0; transform: translateY(24px) scale(0.97); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+.card:hover{ transform: translateY(-6px); }
+.card:hover .cap{ animation: pfCapFloat 1.8s ease-in-out infinite; }
+@keyframes pfCapFloat{
+  0%,100%{ transform: translateY(0) rotate(0deg); }
+  50%{ transform: translateY(-4px) rotate(-1.5deg); }
+}
+.add-btn{ transition: background .25s ease, transform .15s ease; }
+.add-btn:not(.esgotado):hover{ transform: translateY(-2px); }
+.add-btn:not(.esgotado):active{ transform: translateY(0) scale(0.97); }
+.add-btn.added{ animation: pfAddedPop .4s ease; }
+@keyframes pfAddedPop{
+  0%{ transform: scale(1); }
+  35%{ transform: scale(1.05); }
+  100%{ transform: scale(1); }
+}
+
+/* ---------- Product page ---------- */
+.pp-gallery{ animation: pfRiseIn .5s ease both; }
+.pp-info{ animation: pfRiseIn .5s .1s ease both; }
+.pp-accordion-body{ transition: max-height .3s ease, opacity .3s ease; }
+
+/* ---------- About ---------- */
+.about-art{ overflow:hidden; }
+.about-art img{ transition: transform .8s cubic-bezier(.22,.61,.36,1); }
+.about-art:hover img{ transform: scale(1.06); }
+.value{ transition: transform .25s ease; }
+.value:hover{ transform: translateY(-3px); }
+
+/* ---------- Newsletter ---------- */
+.news-form input, .news-form button{ transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
+.news-form button:hover{ transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.25); }
+.news-form input:focus{ box-shadow: 0 0 0 2px rgba(176,138,78,0.5); }
+
+/* ---------- Footer ---------- */
+.foot-grid > div{ transition: transform .3s ease; }
+.foot-pillars span{ display:inline-block; transition: transform .25s ease; }
+.foot-pillars span:hover{ transform: translateY(-3px) scale(1.05); }
+
+/* ---------- Carrinho (drawer) ---------- */
+.overlay{ transition: opacity .3s ease; }
+.drawer{ transition: right .38s cubic-bezier(.22,.61,.36,1); }
+.cart-item{
+  animation: pfCartItemIn .35s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes pfCartItemIn{
+  from{ opacity:0; transform: translateX(16px); }
+  to{ opacity:1; transform: translateX(0); }
+}
+.qty-row button{ transition: transform .15s ease, background .15s ease; }
+.qty-row button:hover{ transform: scale(1.1); }
+.remove-link{ transition: opacity .2s ease, color .2s ease; }
+.remove-link:hover{ opacity:1; }
+
+/* ---------- Modal (checkout) ---------- */
+.modal-overlay{ transition: opacity .25s ease; }
+.modal{
+  animation: pfModalIn .32s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes pfModalIn{
+  from{ opacity:0; transform: translateY(16px) scale(0.97); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+.success-box .anchor-big{ animation: pfAnchorPop .5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes pfAnchorPop{
+  from{ opacity:0; transform: scale(0.5) rotate(-15deg); }
+  to{ opacity:1; transform: scale(1) rotate(0deg); }
+}
+
+/* ---------- Sacola vazia ---------- */
+.cart-empty{ animation: pfFadeIn .4s ease both; }
+
+/* ---------- Scroll suave geral já existente via html{scroll-behavior:smooth} ---------- */

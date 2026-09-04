@@ -8,8 +8,12 @@
 <style>
   body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
     background:#F6F4EE; color:#0D1B2A; font-family:'Montserrat',sans-serif; text-align:center; padding:20px; }
-  .box{ max-width:420px; }
-  .anchor{ font-size:42px; color:#B08A4E; margin-bottom:18px; }
+  .box{ max-width:420px; animation: pfFadeUp .5s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes pfFadeUp{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:translateY(0);} }
+  .anchor{ font-size:42px; color:#B08A4E; margin-bottom:18px; display:inline-block; animation: pfSwing 2s ease-in-out infinite; }
+  @keyframes pfSwing{ 0%,100%{ transform:rotate(0deg);} 50%{ transform:rotate(8deg);} }
+  a{ transition: transform .2s ease, opacity .2s ease; }
+  a:hover{ transform: translateY(-2px); opacity:.9; }
   h1{ font-family:'Cinzel',serif; letter-spacing:3px; font-size:22px; margin-bottom:10px; }
   p{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:17px; opacity:0.8; margin-bottom:26px; }
   a{ display:inline-block; background:#0D1B2A; color:#F6F4EE; padding:13px 28px; font-size:11px;
