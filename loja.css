@@ -324,6 +324,25 @@
   .field{ margin-bottom:14px; }
   .field label{ font-size:10.5px; letter-spacing:1px; font-weight:600; opacity:0.7; display:block; margin-bottom:6px; }
   .field input, .field select, .field textarea{ width:100%; padding:11px 13px; border:1px solid var(--line); background:#fff; font-size:12.5px; border-radius:var(--radius); font-family:'Montserrat',sans-serif; resize:vertical; }
+
+  .btn-google{
+    display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+    background:#fff; color:#3c4043; border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 16px; font-size:11px; letter-spacing:1.5px; font-weight:600; font-family:'Montserrat',sans-serif;
+    cursor:pointer; transition:.2s;
+  }
+  .btn-google:hover{ background:#f7f7f7; }
+  .auth-divider{ display:flex; align-items:center; text-align:center; margin:18px 0; color:var(--ink); opacity:0.5; font-size:10.5px; letter-spacing:1px; }
+  .auth-divider::before, .auth-divider::after{ content:''; flex:1; border-bottom:1px solid var(--line); }
+  .auth-divider span{ padding:0 12px; }
+  .password-wrap{ position:relative; }
+  .password-wrap input{ padding-right:72px !important; }
+  .toggle-pass{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    background:none; border:none; cursor:pointer; font-size:9.5px; font-weight:700; letter-spacing:1px;
+    color:var(--navy); opacity:0.7; font-family:'Montserrat',sans-serif; padding:6px;
+  }
+  .toggle-pass:hover{ opacity:1; }
   .modal-close{ position:absolute; top:16px; right:18px; background:none; border:none; font-size:18px; cursor:pointer; }
   .success-box{ text-align:center; padding:10px 0; }
   .success-box .anchor-big{ font-size:34px; color:var(--gold); margin-bottom:14px; }
