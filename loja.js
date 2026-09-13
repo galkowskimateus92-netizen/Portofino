@@ -1,19 +1,17 @@
-
-Loja · JS
 // Conexão com o Supabase (banco onde fica o estoque)
   const SUPABASE_URL = 'https://mfopdrdmthrztygsimex.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_SwOUdKjJtuNWmsZMZLgQag_EbxZr9xf';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
- 
+
   const products = [
   { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
 ];
- 
+
   // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
   // assume-se disponível (null = "ainda não sei"), pra não travar a loja
   // se o Supabase estiver fora do ar.
   const estoquePorId = {};
- 
+
   async function carregarEstoque(){
     try{
       const { data, error } = await supabaseClient.from('produtos').select('id, estoque');
@@ -25,11 +23,11 @@ Loja · JS
     if(document.getElementById('productGrid')) renderProducts();
     if(document.getElementById('productPage')) checkHashProduct();
   }
- 
+
   function estoqueDe(id){
     return estoquePorId.hasOwnProperty(id) ? estoquePorId[id] : null; // null = desconhecido, trata como disponível
   }
- 
+
   // Carrinho: guardado no localStorage pra "viajar" entre a Home e a página de Coleção
   const CART_STORAGE_KEY = 'portofino_cart';
   function loadCart(){
@@ -42,16 +40,16 @@ Loja · JS
     try{ localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); }catch(err){ /* segue sem salvar */ }
   }
   let cart = loadCart();
- 
+
   function formatPrice(v){
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
   }
- 
+
   function formatInstallment(price){
     const parcela = price / 3;
     return `3x de ${formatPrice(parcela)} sem juros`;
   }
- 
+
   function capSVG(p, size){
     return `<div class="cap" style="width:${size}px; height:${size*0.8}px;">
       <div class="cap-top" style="background:${p.color}; height:${size*0.55}px; left:${size*0.1}px; right:${size*0.1}px; border-radius:${size*0.5}px ${size*0.5}px 6px 6px;"></div>
@@ -61,21 +59,21 @@ Loja · JS
       <div class="cap-brim" style="background:${p.brim};"></div>
     </div>`;
   }
- 
+
   let searchTerm = '';
- 
+
   function renderProducts(){
     const grid = document.getElementById('productGrid');
     const termo = searchTerm.trim().toLowerCase();
     const filtrados = termo
       ? products.filter(p => p.name.toLowerCase().includes(termo) || p.desc.toLowerCase().includes(termo))
       : products;
- 
+
     if(filtrados.length === 0){
       grid.innerHTML = `<p class="small" style="grid-column:1/-1; text-align:center; padding:40px 0;">Nenhum boné encontrado pra "${escapeHTML(searchTerm)}".</p>`;
       return;
     }
- 
+
     grid.innerHTML = filtrados.map(p => {
       const estoque = estoqueDe(p.id);
       const esgotado = estoque !== null && estoque <= 0;
@@ -93,7 +91,7 @@ Loja · JS
     `;
     }).join('');
   }
- 
+
   // Abre a página cheia do produto (estilo "página de produto" de e-commerce)
   function openProduct(id){
     const p = products.find(x => x.id === id);
@@ -102,10 +100,10 @@ Loja · JS
     const estoque = estoqueDe(id);
     const esgotado = estoque !== null && estoque <= 0;
     const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
- 
+
     const outros = products.filter(x => x.id !== id).slice(0, 3);
     ppQty = 1;
- 
+
     document.getElementById('productPageContent').innerHTML = `
       <div class="pp-gallery">${capSVG(p, 340)}</div>
       <div class="pp-info">
@@ -172,14 +170,14 @@ Loja · JS
         </div>` : ''}
       </div>
     `;
- 
+
     document.getElementById('colecao').style.display = 'none';
     document.getElementById('productPage').style.display = 'block';
     window.scrollTo(0, 0);
     history.pushState({produto:id}, '', `#produto-${id}`);
     loadAndRenderReviews(p.id);
   }
- 
+
   function closeProductPage(scrollTargetId){
     const colecaoEl = document.getElementById('colecao');
     const productPageEl = document.getElementById('productPage');
@@ -189,7 +187,7 @@ Loja · JS
     if(target){ target.scrollIntoView({ behavior:'smooth' }); }
     else { window.scrollTo(0, 0); }
   }
- 
+
   // Permite abrir um produto direto por link (ex: seusite.com/#produto-3) e usar o botão "voltar" do navegador
   function checkHashProduct(){
     const hash = window.location.hash.replace('#', '');
@@ -199,14 +197,14 @@ Loja · JS
   }
   window.addEventListener('popstate', checkHashProduct);
   window.addEventListener('hashchange', checkHashProduct);
- 
+
   // Quantidade escolhida na página de produto (reinicia em 1 sempre que abre um produto)
   let ppQty = 1;
   function toggleAccordion(headEl){
     const accordion = headEl.closest('.pp-accordion');
     accordion.classList.toggle('open');
   }
- 
+
   function changeProductQty(delta){
     const novo = ppQty + delta;
     if(novo < 1) return;
@@ -214,14 +212,14 @@ Loja · JS
     const el = document.getElementById('ppQty');
     if(el) el.textContent = ppQty;
   }
- 
+
   function addProductToCart(id, btn){
     for(let i=0; i<ppQty; i++){ addToCart(id, i === ppQty-1 ? btn : null); }
     ppQty = 1;
     const el = document.getElementById('ppQty');
     if(el) el.textContent = ppQty;
   }
- 
+
   function addToCart(id, btn){
     const estoque = estoqueDe(id);
     const existing = cart.find(i => i.id === id);
@@ -246,7 +244,7 @@ Loja · JS
     }
     openDrawer();
   }
- 
+
   function changeQty(id, delta){
     const item = cart.find(i => i.id === id);
     if(!item) return;
@@ -255,22 +253,22 @@ Loja · JS
     saveCart();
     renderCart();
   }
- 
+
   function removeItem(id){
     cart = cart.filter(i => i.id !== id);
     saveCart();
     renderCart();
   }
- 
+
   // Regras de frete: fixo abaixo do valor mínimo, grátis a partir dele
   const FRETE_GRATIS_ACIMA_DE = 250;
   const FRETE_FIXO = 19.90;
- 
+
   function calcularFrete(subtotal){
     if(subtotal === 0) return 0;
     return subtotal >= FRETE_GRATIS_ACIMA_DE ? 0 : FRETE_FIXO;
   }
- 
+
   function renderCart(){
     const itemsEl = document.getElementById('drawerItems');
     const countEl = document.getElementById('cartCount');
@@ -284,7 +282,7 @@ Loja · JS
     subtotalEl.textContent = formatPrice(subtotal);
     freteEl.textContent = frete === 0 ? 'Grátis' : formatPrice(frete);
     totalEl.textContent = formatPrice(subtotal + frete);
- 
+
     if(cart.length === 0){
       itemsEl.innerHTML = `<div class="cart-empty">Seu carrinho está vazio.<br>Explore a coleção Portofino.</div>`;
       return;
@@ -308,7 +306,7 @@ Loja · JS
       </div>
     `).join('');
   }
- 
+
   // Drawer controls
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
@@ -317,12 +315,12 @@ Loja · JS
   document.getElementById('cartOpenBtn').onclick = openDrawer;
   document.getElementById('drawerClose').onclick = closeDrawer;
   overlay.onclick = () => { closeDrawer(); closeModal(); };
- 
+
   // Checkout: primeiro coleta o endereço de entrega, depois manda pro pagamento
   const modalOverlay = document.getElementById('modalOverlay');
   const modalContent = document.getElementById('modalContent');
   const checkoutBtn = document.getElementById('checkoutBtn');
- 
+
   function showModalMessage(html){
     modalContent.innerHTML = html;
     modalOverlay.classList.add('show');
@@ -333,7 +331,7 @@ Loja · JS
   function closeMobileMenu(){
     document.getElementById('mobileMenu').classList.remove('open');
   }
- 
+
   // ===== BUSCA =====
   function toggleSearchBar(){
     const bar = document.getElementById('searchBar');
@@ -374,12 +372,12 @@ Loja · JS
       }
     }
   })();
- 
+
   function closeModal(){
     modalOverlay.classList.remove('show');
     document.getElementById('modalBox').classList.remove('modal-wide');
   }
- 
+
   const infoContent = {
     trocas: {
       title: 'TROCAS E DEVOLUÇÕES',
@@ -397,18 +395,18 @@ Loja · JS
       <br><br>Dúvidas sobre um modelo específico? Manda um e-mail pra <a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a>.`
     }
   };
- 
+
   function openInfoModal(key){
     const info = infoContent[key];
     if(!info) return;
     modalContent.innerHTML = `<h3>${info.title}</h3><p class="small" style="text-align:left; line-height:1.7;">${info.body}</p>`;
     modalOverlay.classList.add('show');
   }
- 
+
   // ===== CONTA DO CLIENTE (login/cadastro) =====
   let currentUser = null;
   let currentProfile = null;
- 
+
   async function initAuth(){
     const { data: { session } } = await supabaseClient.auth.getSession();
     currentUser = session?.user || null;
@@ -420,7 +418,7 @@ Loja · JS
       updateAuthUI();
     });
   }
- 
+
   async function loadProfile(){
     if(!currentUser) return;
     try{
@@ -431,21 +429,21 @@ Loja · JS
       console.error('Conta: erro ao carregar perfil', err);
     }
   }
- 
+
   function updateAuthUI(){
     const btn = document.getElementById('accountBtn');
     if(!btn) return;
     btn.title = currentUser ? 'Minha conta' : 'Entrar';
     btn.classList.toggle('logged-in', !!currentUser);
   }
- 
+
   function openAccountModal(){
     document.getElementById('modalBox').classList.remove('modal-wide');
     if(currentUser){ renderAccountLogged(); }
     else { renderAuthForm('login'); }
     modalOverlay.classList.add('show');
   }
- 
+
   function renderAuthForm(mode){
     const isLogin = mode === 'login';
     modalContent.innerHTML = `
@@ -485,7 +483,7 @@ Loja · JS
     const forgotLink = document.getElementById('forgotPassLink');
     if(forgotLink) forgotLink.onclick = (e) => { e.preventDefault(); renderForgotPasswordForm(); };
   }
- 
+
   function togglePasswordVisibility(inputId, btnId){
     const input = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
@@ -493,7 +491,7 @@ Loja · JS
     input.type = showing ? 'password' : 'text';
     btn.textContent = showing ? 'MOSTRAR' : 'OCULTAR';
   }
- 
+
   async function handleGoogleLogin(){
     try{
       const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -505,7 +503,7 @@ Loja · JS
       console.error('Erro ao entrar com Google', err);
     }
   }
- 
+
   function renderForgotPasswordForm(){
     modalContent.innerHTML = `
       <h3>ESQUECI MINHA SENHA</h3>
@@ -521,7 +519,7 @@ Loja · JS
     `;
     document.getElementById('forgotForm').onsubmit = handleForgotPassword;
   }
- 
+
   async function handleForgotPassword(e){
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -543,7 +541,7 @@ Loja · JS
       btn.disabled = false; btn.textContent = 'ENVIAR LINK';
     }
   }
- 
+
   async function handleLogin(e){
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -563,7 +561,7 @@ Loja · JS
       btn.disabled = false; btn.textContent = 'ENTRAR';
     }
   }
- 
+
   async function handleSignup(e){
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -590,12 +588,12 @@ Loja · JS
       btn.disabled = false; btn.textContent = 'CRIAR CONTA';
     }
   }
- 
+
   async function handleLogout(){
     await supabaseClient.auth.signOut();
     closeModal();
   }
- 
+
   function renderAccountLogged(){
     modalContent.innerHTML = `
       <h3>MINHA CONTA</h3>
@@ -608,15 +606,15 @@ Loja · JS
     `;
     switchAccountTab('pedidos');
   }
- 
+
   function switchAccountTab(tab){
     document.getElementById('tabPedidos').classList.toggle('active', tab === 'pedidos');
     document.getElementById('tabDados').classList.toggle('active', tab === 'dados');
     if(tab === 'pedidos') renderPedidosTab(); else renderDadosTab();
   }
- 
+
   let currentPedidos = [];
- 
+
   async function renderPedidosTab(){
     const el = document.getElementById('accountTabContent');
     el.innerHTML = '<p class="small">Carregando pedidos…</p>';
@@ -624,7 +622,7 @@ Loja · JS
       const { data, error } = await supabaseClient
         .from('pedidos').select('*').eq('user_id', currentUser.id).order('criado_em', { ascending:false });
       if(error) throw error;
- 
+
       // Pedidos pendentes com mais de 1 hora somem da lista (e são apagados de verdade do banco)
       const umaHoraAtras = Date.now() - 60 * 60 * 1000;
       const expirados = (data || []).filter(p => p.status === 'pendente' && new Date(p.criado_em).getTime() < umaHoraAtras);
@@ -633,7 +631,7 @@ Loja · JS
       }
       const idsExpirados = new Set(expirados.map(p => p.id));
       currentPedidos = (data || []).filter(p => !idsExpirados.has(p.id));
- 
+
       if(currentPedidos.length === 0){
         el.innerHTML = '<p class="small">Você ainda não fez nenhum pedido.</p>';
         return;
@@ -650,7 +648,7 @@ Loja · JS
       el.innerHTML = '<p class="small">Não foi possível carregar seus pedidos agora.</p>';
     }
   }
- 
+
   function openPedidoDetail(id){
     const pedido = currentPedidos.find(p => String(p.id) === String(id));
     if(!pedido) return;
@@ -672,7 +670,7 @@ Loja · JS
       </div>
     `;
   }
- 
+
   function renderDadosTab(){
     const el = document.getElementById('accountTabContent');
     const p = currentProfile || {};
@@ -699,7 +697,7 @@ Loja · JS
     document.getElementById('cepInputPerfil').addEventListener('blur', (e) => lookupCep(e, 'Perfil'));
     document.getElementById('perfilForm').onsubmit = handleSalvarPerfil;
   }
- 
+
   async function handleSalvarPerfil(e){
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -726,18 +724,18 @@ Loja · JS
       btn.disabled = false; btn.textContent = 'SALVAR DADOS';
     }
   }
- 
+
   document.getElementById('accountBtn')?.addEventListener('click', openAccountModal);
   initAuth();
- 
+
   // Frete calculado em tempo real (via Melhor Envio) para o CEP digitado no checkout.
   // null enquanto não foi calculado ainda — nesse caso usamos o valor fixo como estimativa.
   let freteCalculado = null;
- 
+
   function freteAtual(subtotal){
     return freteCalculado ? freteCalculado.preco : calcularFrete(subtotal);
   }
- 
+
   function renderShippingSummary(){
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const el = document.getElementById('shippingSummary');
@@ -751,7 +749,7 @@ Loja · JS
     }
     el.innerHTML = `Subtotal: ${formatPrice(subtotal)} + Frete: ${freteTexto} = <strong>${formatPrice(subtotal + frete)}</strong>`;
   }
- 
+
   function openShippingModal(){
     if(cart.length === 0) return;
     document.getElementById('modalBox').classList.remove('modal-wide');
@@ -788,7 +786,7 @@ Loja · JS
       calcularFreteReal(p.cep);
     }
   }
- 
+
   // Busca o endereço automaticamente a partir do CEP (API pública ViaCEP)
   async function lookupCep(e, suffix){
     suffix = suffix || '';
@@ -807,7 +805,7 @@ Loja · JS
     // Só calcula o frete real no formulário de entrega (checkout), não no de "Meus dados"
     if(!suffix) calcularFreteReal(cep);
   }
- 
+
   // Chama a função serverless que consulta a Melhor Envio pra pegar o frete real do CEP.
   async function calcularFreteReal(cep){
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
@@ -832,21 +830,21 @@ Loja · JS
     }
     renderShippingSummary();
   }
- 
+
   async function handleShippingSubmit(e){
     e.preventDefault();
     const form = e.target;
     const submitBtn = form.querySelector('button[type=submit]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'ENVIANDO...';
- 
+
     const orderNumber = 'PTF-' + Math.floor(10000 + Math.random()*89999);
     const fd = new FormData(form);
     const payer = { name: fd.get('nome'), email: fd.get('email') };
     const itemsDesc = cart.map(i => `${i.qty}x ${i.name}`).join(', ');
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const frete = freteAtual(subtotal);
- 
+
     // Salva o pedido + endereço no Netlify Forms (você recebe por e-mail / vê no painel)
     const body = new URLSearchParams({
       'form-name':'pedidos',
@@ -865,7 +863,7 @@ Loja · JS
       itens: itemsDesc,
       total: formatPrice(subtotal + frete)
     });
- 
+
     try{
       await fetch('/', {
         method:'POST',
@@ -875,7 +873,7 @@ Loja · JS
     }catch(err){
       // mesmo que o registro falhe, seguimos pro pagamento — não trava a venda
     }
- 
+
     // Se o cliente estiver logado: salva o endereço pra próxima compra e registra no histórico de pedidos
     if(currentUser){
       const dadosPerfil = {
@@ -889,7 +887,7 @@ Loja · JS
         await supabaseClient.from('perfis').upsert(dadosPerfil);
         currentProfile = dadosPerfil;
       }catch(err){ /* não trava a compra se isso falhar */ }
- 
+
       try{
         await supabaseClient.from('pedidos').insert({
           user_id: currentUser.id,
@@ -900,10 +898,10 @@ Loja · JS
         });
       }catch(err){ /* não trava a compra se isso falhar */ }
     }
- 
+
     startCheckout(orderNumber, payer, frete);
   }
- 
+
   async function startCheckout(orderNumber, payer, frete){
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
@@ -941,10 +939,10 @@ Loja · JS
       checkoutBtn.textContent = 'FINALIZAR COMPRA';
     }
   }
- 
+
   checkoutBtn.onclick = openShippingModal;
   document.getElementById('modalClose').onclick = closeModal;
- 
+
   // ===== AVALIAÇÕES =====
   function renderStarsHTML(nota){
     const cheias = Math.round(nota);
@@ -952,7 +950,7 @@ Loja · JS
     for(let i=1; i<=5; i++){ out += i <= cheias ? '★' : '☆'; }
     return out;
   }
- 
+
   async function loadAndRenderReviews(productId){
     const summaryEl = document.getElementById(`starsSummary-${productId}`);
     const bodyEl = document.getElementById(`reviewsBody-${productId}`);
@@ -963,16 +961,16 @@ Loja · JS
         .eq('produto_id', productId)
         .order('criado_em', { ascending: false });
       if(error) throw error;
- 
+
       const total = data.length;
       const media = total > 0 ? data.reduce((a,r) => a + r.nota, 0) / total : 0;
- 
+
       if(summaryEl){
         summaryEl.innerHTML = total > 0
           ? `<span class="stars">${renderStarsHTML(media)}</span> <span class="stars-count">${media.toFixed(1)} · ${total} avaliaç${total===1?'ão':'ões'}</span>`
           : `<span class="stars-count">Seja o primeiro a avaliar</span>`;
       }
- 
+
       if(bodyEl){
         bodyEl.innerHTML = `
           ${total === 0 ? `<p class="small" style="margin-bottom:14px;">Ainda não há avaliações desse produto.</p>` : data.map(r => `
@@ -1004,29 +1002,29 @@ Loja · JS
       if(summaryEl) summaryEl.innerHTML = '';
     }
   }
- 
+
   function escapeHTML(str){
     const div = document.createElement('div');
     div.textContent = str || '';
     return div.innerHTML;
   }
- 
+
   async function submitReview(productId){
     const nomeEl = document.getElementById(`reviewName-${productId}`);
     const notaEl = document.getElementById(`reviewStars-${productId}`);
     const comentarioEl = document.getElementById(`reviewComment-${productId}`);
     const msgEl = document.getElementById(`reviewMsg-${productId}`);
- 
+
     const nome = nomeEl.value.trim();
     if(!nome){
       msgEl.textContent = 'Digite seu nome antes de enviar.';
       msgEl.className = 'review-msg error';
       return;
     }
- 
+
     msgEl.textContent = 'Enviando...';
     msgEl.className = 'review-msg';
- 
+
     try{
       const { error } = await supabaseClient.from('avaliacoes').insert({
         produto_id: productId,
@@ -1047,9 +1045,6 @@ Loja · JS
       msgEl.className = 'review-msg error';
     }
   }
- 
+
   carregarEstoque();
   renderCart();
- 
-
-Este tipo de arquivo não pode ser aberto.
