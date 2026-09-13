@@ -1,4 +1,4 @@
-  // Conexão com o Supabase (banco onde fica o estoque)
+// Conexão com o Supabase (banco onde fica o estoque)
   const SUPABASE_URL = 'https://mfopdrdmthrztygsimex.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_SwOUdKjJtuNWmsZMZLgQag_EbxZr9xf';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -448,10 +448,27 @@
     const isLogin = mode === 'login';
     modalContent.innerHTML = `
       <h3>${isLogin ? 'ENTRAR' : 'CRIAR CONTA'}</h3>
+      <button type="button" class="btn-google" id="googleAuthBtn">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.08-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/>
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/>
+        </svg>
+        CONTINUAR COM O GOOGLE
+      </button>
+      <div class="auth-divider"><span>ou</span></div>
       <form id="authForm">
         ${!isLogin ? `<div class="field"><label>NOME</label><input type="text" name="nome" required></div>` : ''}
         <div class="field"><label>E-MAIL</label><input type="email" name="email" required></div>
-        <div class="field"><label>SENHA</label><input type="password" name="senha" minlength="6" required></div>
+        <div class="field">
+          <label>SENHA</label>
+          <div class="password-wrap">
+            <input type="password" name="senha" id="senhaInput" minlength="6" required>
+            <button type="button" class="toggle-pass" id="togglePassBtn" aria-label="Mostrar senha">MOSTRAR</button>
+          </div>
+        </div>
+        ${isLogin ? `<p class="small" style="text-align:right; margin:-6px 0 4px;"><a href="#" id="forgotPassLink" style="text-decoration:underline;">Esqueci minha senha</a></p>` : ''}
         <p class="review-msg" id="authMsg"></p>
         <button type="submit" class="btn" style="width:100%;">${isLogin ? 'ENTRAR' : 'CRIAR CONTA'}</button>
       </form>
@@ -461,6 +478,68 @@
       </p>
     `;
     document.getElementById('authForm').onsubmit = isLogin ? handleLogin : handleSignup;
+    document.getElementById('googleAuthBtn').onclick = handleGoogleLogin;
+    document.getElementById('togglePassBtn').onclick = () => togglePasswordVisibility('senhaInput', 'togglePassBtn');
+    const forgotLink = document.getElementById('forgotPassLink');
+    if(forgotLink) forgotLink.onclick = (e) => { e.preventDefault(); renderForgotPasswordForm(); };
+  }
+
+  function togglePasswordVisibility(inputId, btnId){
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.textContent = showing ? 'MOSTRAR' : 'OCULTAR';
+  }
+
+  async function handleGoogleLogin(){
+    try{
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + window.location.pathname }
+      });
+      if(error) throw error;
+    }catch(err){
+      console.error('Erro ao entrar com Google', err);
+    }
+  }
+
+  function renderForgotPasswordForm(){
+    modalContent.innerHTML = `
+      <h3>ESQUECI MINHA SENHA</h3>
+      <p class="small" style="margin-bottom:14px;">Informe seu e-mail e enviaremos um link para redefinir sua senha.</p>
+      <form id="forgotForm">
+        <div class="field"><label>E-MAIL</label><input type="email" name="email" required></div>
+        <p class="review-msg" id="forgotMsg"></p>
+        <button type="submit" class="btn" style="width:100%;">ENVIAR LINK</button>
+      </form>
+      <p class="small" style="text-align:center; margin-top:16px;">
+        <a href="#" onclick="renderAuthForm('login'); return false;" style="text-decoration:underline;">Voltar para o login</a>
+      </p>
+    `;
+    document.getElementById('forgotForm').onsubmit = handleForgotPassword;
+  }
+
+  async function handleForgotPassword(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = e.target.querySelector('button[type=submit]');
+    const msg = document.getElementById('forgotMsg');
+    btn.disabled = true; btn.textContent = 'ENVIANDO...';
+    msg.textContent = ''; msg.className = 'review-msg';
+    try{
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(fd.get('email'), {
+        redirectTo: window.location.origin + '/redefinir-senha.html'
+      });
+      if(error) throw error;
+      msg.textContent = 'Link enviado! Confira seu e-mail (inclusive a caixa de spam).';
+      msg.className = 'review-msg success';
+      btn.disabled = false; btn.textContent = 'ENVIAR LINK';
+    }catch(err){
+      msg.textContent = 'Não foi possível enviar o link agora. Tente novamente.';
+      msg.className = 'review-msg error';
+      btn.disabled = false; btn.textContent = 'ENVIAR LINK';
+    }
   }
 
   async function handleLogin(e){
