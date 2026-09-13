@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redefinir senha — Portofino</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital@1&family=Cinzel:wght@500&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:#F6F4EE; color:#0D1B2A; font-family:'Montserrat',sans-serif; text-align:center; padding:20px; }
+  .box{ max-width:400px; width:100%; animation: pfFadeUp .5s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes pfFadeUp{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:translateY(0);} }
+  .anchor{ font-size:42px; color:#B08A4E; margin-bottom:18px; display:inline-block; }
+  h1{ font-family:'Cinzel',serif; letter-spacing:3px; font-size:22px; margin-bottom:10px; }
+  p{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:17px; opacity:0.8; margin-bottom:26px; }
+  .field{ margin-bottom:14px; text-align:left; }
+  .field label{ font-size:10.5px; letter-spacing:1px; font-weight:600; opacity:0.7; display:block; margin-bottom:6px; }
+  .field input{ width:100%; box-sizing:border-box; padding:11px 13px; border:1px solid #ddd6c9; background:#fff; font-size:12.5px; border-radius:2px; font-family:'Montserrat',sans-serif; }
+  .password-wrap{ position:relative; }
+  .password-wrap input{ padding-right:72px; }
+  .toggle-pass{ position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer;
+    font-size:9.5px; font-weight:700; letter-spacing:1px; color:#0D1B2A; opacity:0.7; font-family:'Montserrat',sans-serif; padding:6px; }
+  .toggle-pass:hover{ opacity:1; }
+  button[type=submit]{ display:inline-block; background:#0D1B2A; color:#F6F4EE; padding:13px 28px; font-size:11px;
+    letter-spacing:2px; border:none; border-radius:2px; cursor:pointer; width:100%; margin-top:6px; }
+  button[type=submit]:disabled{ opacity:0.6; cursor:default; }
+  a{ display:inline-block; margin-top:20px; color:#0D1B2A; font-size:11px; letter-spacing:1px; text-decoration:underline; }
+  .msg{ font-size:12px; margin:10px 0; min-height:16px; }
+  .msg.error{ color:#B3261E; }
+  .msg.success{ color:#2E7D32; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="anchor">⚓</div>
+    <h1>REDEFINIR SENHA</h1>
+    <p id="introText">Escolha uma nova senha para sua conta Portofino.</p>
+    <form id="resetForm">
+      <div class="field">
+        <label>NOVA SENHA</label>
+        <div class="password-wrap">
+          <input type="password" id="novaSenha" minlength="6" required>
+          <button type="button" class="toggle-pass" id="togglePassBtn">MOSTRAR</button>
+        </div>
+      </div>
+      <p class="msg" id="resetMsg"></p>
+      <button type="submit">SALVAR NOVA SENHA</button>
+    </form>
+    <a href="/">Voltar para a loja</a>
+  </div>
+
+<script>
+  const SUPABASE_URL = 'https://mfopdrdmthrztygsimex.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_SwOUdKjJtuNWmsZMZLgQag_EbxZr9xf';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  document.getElementById('togglePassBtn').onclick = () => {
+    const input = document.getElementById('novaSenha');
+    const btn = document.getElementById('togglePassBtn');
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.textContent = showing ? 'MOSTRAR' : 'OCULTAR';
+  };
+
+  let recoveryReady = false;
+  supabaseClient.auth.onAuthStateChange((event) => {
+    if(event === 'PASSWORD_RECOVERY') recoveryReady = true;
+  });
+
+  document.getElementById('resetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    const msg = document.getElementById('resetMsg');
+    btn.disabled = true; btn.textContent = 'SALVANDO...';
+    msg.textContent = ''; msg.className = 'msg';
+    try{
+      const { error } = await supabaseClient.auth.updateUser({ password: document.getElementById('novaSenha').value });
+      if(error) throw error;
+      msg.textContent = 'Senha atualizada! Redirecionando...';
+      msg.className = 'msg success';
+      setTimeout(() => { window.location.href = '/'; }, 1800);
+    }catch(err){
+      msg.textContent = 'Não foi possível salvar. O link pode ter expirado — solicite um novo.';
+      msg.className = 'msg error';
+      btn.disabled = false; btn.textContent = 'SALVAR NOVA SENHA';
+    }
+  });
+</script>
+</body>
+</html>
