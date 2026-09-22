@@ -1046,5 +1046,30 @@
     }
   }
 
+  // ===== NEWSLETTER (só existe na Home) =====
+  document.getElementById('newsletterForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type=submit]');
+    const msg = document.getElementById('newsletterMsg');
+    const email = document.getElementById('newsletterEmail').value;
+    btn.disabled = true; btn.textContent = 'ENVIANDO...';
+    try{
+      await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ 'form-name': 'newsletter', email }).toString()
+      });
+      msg.textContent = 'Inscrição confirmada! Fique de olho no seu e-mail.';
+      msg.className = 'small';
+      form.reset();
+    }catch(err){
+      msg.textContent = 'Não foi possível inscrever agora. Tente novamente.';
+      msg.className = 'small';
+    }finally{
+      btn.disabled = false; btn.textContent = 'INSCREVER';
+    }
+  });
+
   carregarEstoque();
   renderCart();

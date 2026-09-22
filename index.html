@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portofino — Bonés Italian Riviera</title>
+<meta name="description" content="Bonés Portofino inspirados na Riviera Italiana. Algodão premium, âncora bordada e design atemporal. Envio para todo o Brasil.">
+<link rel="icon" type="image/jpeg" href="portofino-logo-pf.jpg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Portofino — Bonés Italian Riviera">
+<meta property="og:description" content="Bonés inspirados na Riviera Italiana. Algodão premium, âncora bordada e design atemporal.">
+<meta property="og:image" content="https://portofinoco.com.br/portofino-hero-direita.jpg">
+<meta property="og:url" content="https://portofinoco.com.br/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Portofino — Bonés Italian Riviera">
+<meta name="twitter:description" content="Bonés inspirados na Riviera Italiana. Algodão premium, âncora bordada e design atemporal.">
+<meta name="twitter:image" content="https://portofinoco.com.br/portofino-hero-direita.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,500&family=Cinzel:wght@400;500;600&family=Montserrat:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="loja.css">
@@ -38,6 +49,12 @@
   <input type="text" name="valor" />
   <input type="text" name="pagador_email" />
   <input type="text" name="payment_id" />
+</form>
+
+<!-- Formulário oculto pro Netlify Forms reconhecer as inscrições da newsletter -->
+<form name="newsletter" data-netlify="true" netlify-honeypot="bot-field-news" hidden>
+  <input type="email" name="email" />
+  <input name="bot-field-news" />
 </form>
 
 <div class="announce">FRETE GRÁTIS ACIMA DE R$ 250 · ENVIO PARA TODO O BRASIL</div>
@@ -122,10 +139,11 @@
   <div class="wrap">
     <h2>JUNTE-SE À RIVIERA</h2>
     <p>Novidades, lançamentos e edições limitadas em primeira mão.</p>
-    <form class="news-form" onsubmit="event.preventDefault(); this.reset(); alert('Inscrição confirmada!');">
-      <input type="email" placeholder="seu@email.com" required>
+    <form class="news-form" id="newsletterForm">
+      <input type="email" name="email" id="newsletterEmail" placeholder="seu@email.com" required>
       <button type="submit">INSCREVER</button>
     </form>
+    <p class="small" id="newsletterMsg" style="margin-top:10px; min-height:16px;"></p>
   </div>
 </section>
 
