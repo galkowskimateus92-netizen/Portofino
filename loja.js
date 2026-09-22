@@ -269,19 +269,54 @@
     return subtotal >= FRETE_GRATIS_ACIMA_DE ? 0 : FRETE_FIXO;
   }
 
+  // ===== CUPOM DE DESCONTO =====
+  // Cupom único de boas-vindas: 10% de desconto, sem expiração e sem limite de uso por enquanto.
+  const CUPONS = { 'RIVIERA10': 0.10 };
+  let cupomAtivo = null; // null ou o código em maiúsculas
+  function percentualCupom(){
+    return cupomAtivo ? CUPONS[cupomAtivo] : 0;
+  }
+  function round2(v){ return Math.round(v * 100) / 100; }
+
+  function aplicarCupom(){
+    const input = document.getElementById('cupomInput');
+    const msg = document.getElementById('cupomMsg');
+    const codigo = input.value.trim().toUpperCase();
+    if(!codigo) return;
+    if(CUPONS.hasOwnProperty(codigo)){
+      cupomAtivo = codigo;
+      msg.textContent = `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
+      msg.className = 'small';
+      msg.style.color = '#2E7D32';
+    } else {
+      cupomAtivo = null;
+      msg.textContent = 'Cupom inválido.';
+      msg.className = 'small';
+      msg.style.color = '#B3261E';
+    }
+    renderCart();
+  }
+
   function renderCart(){
     const itemsEl = document.getElementById('drawerItems');
     const countEl = document.getElementById('cartCount');
     const subtotalEl = document.getElementById('subtotalVal');
+    const descontoRow = document.getElementById('descontoRow');
+    const descontoEl = document.getElementById('descontoVal');
     const freteEl = document.getElementById('freteVal');
     const totalEl = document.getElementById('totalVal');
     const totalCount = cart.reduce((a,i)=>a+i.qty,0);
     countEl.textContent = totalCount;
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
-    const frete = calcularFrete(subtotal);
+    const desconto = round2(subtotal * percentualCupom());
+    const frete = calcularFrete(subtotal); // régua de frete grátis usa o subtotal cheio, sem o cupom
     subtotalEl.textContent = formatPrice(subtotal);
+    if(descontoRow){
+      descontoRow.hidden = desconto <= 0;
+      if(descontoEl) descontoEl.textContent = `-${formatPrice(desconto)}`;
+    }
     freteEl.textContent = frete === 0 ? 'Grátis' : formatPrice(frete);
-    totalEl.textContent = formatPrice(subtotal + frete);
+    totalEl.textContent = formatPrice(subtotal - desconto + frete);
 
     if(cart.length === 0){
       itemsEl.innerHTML = `<div class="cart-empty">Seu carrinho está vazio.<br>Explore a coleção Portofino.</div>`;
@@ -306,6 +341,11 @@
       </div>
     `).join('');
   }
+
+  document.getElementById('cupomBtn')?.addEventListener('click', aplicarCupom);
+  document.getElementById('cupomInput')?.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); aplicarCupom(); }
+  });
 
   // Drawer controls
   const drawer = document.getElementById('drawer');
@@ -774,6 +814,7 @@
           <div class="field" style="flex:2;"><label>CIDADE</label><input type="text" name="cidade" id="cidadeInput" value="${p.cidade || ''}" required></div>
           <div class="field" style="flex:1;"><label>UF</label><input type="text" name="estado" id="estadoInput" maxlength="2" value="${p.estado || ''}" required></div>
         </div>
+        <p class="small" id="shippingMsg" style="color:#B3261E; margin:0 0 4px;"></p>
         <button type="submit" class="btn" style="width:100%; margin-top:8px;">IR PARA O PAGAMENTO</button>
       </form>
     `;
@@ -840,10 +881,46 @@
 
     const orderNumber = 'PTF-' + Math.floor(10000 + Math.random()*89999);
     const fd = new FormData(form);
+    const emailCliente = fd.get('email').trim().toLowerCase();
     const payer = { name: fd.get('nome'), email: fd.get('email') };
     const itemsDesc = cart.map(i => `${i.qty}x ${i.name}`).join(', ');
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const frete = freteAtual(subtotal);
+    let percentualDesconto = percentualCupom();
+    const msgEl = document.getElementById('shippingMsg');
+    if(msgEl) msgEl.textContent = '';
+
+    // Se tem cupom aplicado, confere no Supabase se esse e-mail já usou ele antes
+    if(cupomAtivo){
+      try{
+        const { data: usoAnterior, error } = await supabaseClient
+          .from('cupons_usados')
+          .select('id')
+          .eq('email', emailCliente)
+          .eq('codigo', cupomAtivo)
+          .maybeSingle();
+        if(error) throw error;
+        if(usoAnterior){
+          if(msgEl) msgEl.textContent = `O cupom ${cupomAtivo} já foi usado com esse e-mail. Remova o cupom no carrinho pra continuar.`;
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'IR PARA O PAGAMENTO';
+          return;
+        }
+      }catch(err){
+        // Se não der pra checar (Supabase fora do ar), segue sem aplicar o desconto por segurança
+        percentualDesconto = 0;
+      }
+    }
+    const desconto = round2(subtotal * percentualDesconto);
+
+    // Marca esse cupom como usado por esse e-mail, pra não deixar aplicar de novo
+    if(cupomAtivo && percentualDesconto > 0){
+      try{
+        await supabaseClient.from('cupons_usados').insert({
+          email: emailCliente, codigo: cupomAtivo, pedido_numero: orderNumber
+        });
+      }catch(err){ /* se falhar, não trava a compra — o pior caso é o cupom ser reutilizável dessa vez */ }
+    }
 
     // Salva o pedido + endereço no Netlify Forms (você recebe por e-mail / vê no painel)
     const body = new URLSearchParams({
@@ -861,7 +938,8 @@
       cidade: fd.get('cidade'),
       estado: fd.get('estado'),
       itens: itemsDesc,
-      total: formatPrice(subtotal + frete)
+      cupom: cupomAtivo || '',
+      total: formatPrice(subtotal - desconto + frete)
     });
 
     try{
@@ -893,20 +971,21 @@
           user_id: currentUser.id,
           numero_pedido: orderNumber,
           itens: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
-          total: subtotal + frete,
+          total: subtotal - desconto + frete,
           status: 'pendente',
         });
       }catch(err){ /* não trava a compra se isso falhar */ }
     }
 
-    startCheckout(orderNumber, payer, frete);
+    startCheckout(orderNumber, payer, frete, percentualDesconto);
   }
 
-  async function startCheckout(orderNumber, payer, frete){
+  async function startCheckout(orderNumber, payer, frete, percentualDesconto){
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
     try{
-      const items = cart.map(i => ({ productId:i.id, name:i.name, qty:i.qty, price:i.price }));
+      const fator = 1 - (percentualDesconto || 0);
+      const items = cart.map(i => ({ productId:i.id, name:i.name, qty:i.qty, price: round2(i.price * fator) }));
       if(frete > 0){
         items.push({ name:'Frete', qty:1, price:frete });
       }

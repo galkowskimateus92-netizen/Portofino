@@ -312,6 +312,10 @@
   .remove-link{ font-size:10.5px; opacity:0.5; margin-left:auto; cursor:pointer; text-decoration:underline; }
   .drawer-foot{ padding:22px 24px; border-top:1px solid var(--line); }
   .subtotal-row{ display:flex; justify-content:space-between; font-size:14px; font-weight:600; margin-bottom:16px; }
+  .cupom-row{ display:flex; gap:8px; margin-bottom:8px; }
+  .cupom-row input{ flex:1; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius); font-size:11.5px; letter-spacing:0.5px; font-family:'Montserrat',sans-serif; text-transform:uppercase; }
+  .cupom-row button{ background:transparent; border:1px solid var(--navy); color:var(--navy); padding:0 16px; border-radius:var(--radius); font-size:10.5px; font-weight:700; letter-spacing:1px; cursor:pointer; }
+  .cupom-row button:hover{ background:var(--navy); color:var(--cream); }
   .checkout-btn{ width:100%; padding:15px; }
 
   /* MODAL */
