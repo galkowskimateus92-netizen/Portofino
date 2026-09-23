@@ -787,6 +787,7 @@
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const el = document.getElementById('shippingSummary');
     if(!el) return;
+    const desconto = round2(subtotal * percentualCupom());
     const frete = freteAtual(subtotal);
     let freteTexto;
     if(freteCalculado){
@@ -794,7 +795,26 @@
     } else {
       freteTexto = (frete === 0 ? 'Grátis' : `${formatPrice(frete)} (estimado)`);
     }
-    el.innerHTML = `Subtotal: ${formatPrice(subtotal)} + Frete: ${freteTexto} = <strong>${formatPrice(subtotal + frete)}</strong>`;
+    const descontoTexto = desconto > 0 ? ` − Desconto: ${formatPrice(desconto)}` : '';
+    el.innerHTML = `Subtotal: ${formatPrice(subtotal)}${descontoTexto} + Frete: ${freteTexto} = <strong>${formatPrice(subtotal - desconto + frete)}</strong>`;
+  }
+
+  function aplicarCupomEntrega(){
+    const input = document.getElementById('cupomInputEntrega');
+    const msg = document.getElementById('cupomMsgEntrega');
+    const codigo = input.value.trim().toUpperCase();
+    if(!codigo) return;
+    if(CUPONS.hasOwnProperty(codigo)){
+      cupomAtivo = codigo;
+      msg.textContent = `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
+      msg.style.color = '#2E7D32';
+    } else {
+      cupomAtivo = null;
+      msg.textContent = 'Cupom inválido.';
+      msg.style.color = '#B3261E';
+    }
+    renderShippingSummary();
+    renderCart();
   }
 
   function openShippingModal(){
@@ -804,6 +824,11 @@
     const p = currentProfile || {};
     modalContent.innerHTML = `
       <h3>DADOS PARA ENTREGA</h3>
+      <div class="cupom-row">
+        <input type="text" id="cupomInputEntrega" placeholder="CUPOM DE DESCONTO" value="${cupomAtivo || ''}">
+        <button type="button" id="cupomBtnEntrega">APLICAR</button>
+      </div>
+      <p class="small" id="cupomMsgEntrega" style="margin:0 0 10px;"></p>
       <p class="small" id="shippingSummary"></p>
       <form id="shippingForm">
         <div class="field"><label>NOME COMPLETO</label><input type="text" name="nome" value="${p.nome || ''}" required></div>
@@ -827,6 +852,10 @@
     `;
     modalOverlay.classList.add('show');
     renderShippingSummary();
+    document.getElementById('cupomBtnEntrega').onclick = aplicarCupomEntrega;
+    document.getElementById('cupomInputEntrega').addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); aplicarCupomEntrega(); }
+    });
     document.getElementById('cepInput').addEventListener('blur', (e) => lookupCep(e));
     document.getElementById('shippingForm').onsubmit = handleShippingSubmit;
     // Se o CEP já veio preenchido do perfil salvo, calcula o frete real de cara.
@@ -1154,6 +1183,17 @@
       msg.className = 'small';
     }finally{
       btn.disabled = false; btn.textContent = 'INSCREVER';
+    }
+  });
+
+  // Se a pessoa clicar em "voltar" do navegador depois de ir pro Mercado Pago (ou qualquer
+  // outra página), o Chrome às vezes restaura a página exatamente como ela estava — com o
+  // botão travado em "PROCESSANDO...". Esse evento pega essa restauração e reseta a tela.
+  window.addEventListener('pageshow', (e) => {
+    if(e.persisted){
+      if(checkoutBtn){ checkoutBtn.disabled = false; checkoutBtn.textContent = 'FINALIZAR COMPRA'; }
+      closeModal();
+      renderCart();
     }
   });
 
