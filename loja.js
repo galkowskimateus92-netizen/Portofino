@@ -318,6 +318,13 @@
     freteEl.textContent = frete === 0 ? 'Grátis' : formatPrice(frete);
     totalEl.textContent = formatPrice(subtotal - desconto + frete);
 
+    // Qualquer mudança no carrinho invalida um checkout que ficou "travado" em processamento
+    // (ex: a pessoa mexeu no carrinho de novo antes do pagamento carregar).
+    if(checkoutBtn){
+      checkoutBtn.disabled = false;
+      checkoutBtn.textContent = 'FINALIZAR COMPRA';
+    }
+
     if(cart.length === 0){
       itemsEl.innerHTML = `<div class="cart-empty">Seu carrinho está vazio.<br>Explore a coleção Portofino.</div>`;
       return;
