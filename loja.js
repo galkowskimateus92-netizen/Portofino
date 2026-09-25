@@ -146,7 +146,7 @@
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
               <span>ENTREGA</span><span class="pp-accordion-icon">+</span>
             </button>
-            <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250. Trocas em até 7 dias após o recebimento.</p></div>
+            <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250 (e sempre grátis para São Bento do Sul/SC). Trocas em até 7 dias após o recebimento.</p></div>
           </div>
           <div class="pp-accordion">
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
@@ -433,7 +433,7 @@
     },
     frete: {
       title: 'FRETE E ENTREGA',
-      body: `Enviamos para todo o Brasil pelos Correios. Frete grátis em compras acima de R$250.
+      body: `Enviamos para todo o Brasil pelos Correios. Frete grátis em compras acima de R$250 — e para São Bento do Sul/SC o frete é sempre grátis, em qualquer valor.
       <br><br>Prazo médio de envio: 2 a 5 dias úteis após a confirmação do pagamento, mais o prazo de transporte dos Correios até seu endereço.`
     },
     tamanhos: {
@@ -778,8 +778,16 @@
   // Frete calculado em tempo real (via Melhor Envio) para o CEP digitado no checkout.
   // null enquanto não foi calculado ainda — nesse caso usamos o valor fixo como estimativa.
   let freteCalculado = null;
+  // true quando o CEP do checkout é de São Bento do Sul/SC (frete grátis na cidade da loja)
+  let entregaLocal = false;
+
+  function ehCidadeFreteGratis(cidade, uf){
+    const c = String(cidade || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+    return c === 'sao bento do sul' && String(uf || '').trim().toUpperCase() === 'SC';
+  }
 
   function freteAtual(subtotal){
+    if(entregaLocal) return 0;
     return freteCalculado ? freteCalculado.preco : calcularFrete(subtotal);
   }
 
@@ -790,7 +798,9 @@
     const desconto = round2(subtotal * percentualCupom());
     const frete = freteAtual(subtotal);
     let freteTexto;
-    if(freteCalculado){
+    if(entregaLocal){
+      freteTexto = 'Grátis (São Bento do Sul)';
+    } else if(freteCalculado){
       freteTexto = (frete === 0 ? 'Grátis' : `${formatPrice(frete)} (${freteCalculado.servico}, ${freteCalculado.prazoDias} dias úteis)`);
     } else {
       freteTexto = (frete === 0 ? 'Grátis' : `${formatPrice(frete)} (estimado)`);
@@ -821,6 +831,7 @@
     if(cart.length === 0) return;
     document.getElementById('modalBox').classList.remove('modal-wide');
     freteCalculado = null;
+    entregaLocal = false;
     const p = currentProfile || {};
     modalContent.innerHTML = `
       <h3>DADOS PARA ENTREGA</h3>
@@ -872,6 +883,7 @@
     try{
       const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await resp.json();
+      if(!suffix) entregaLocal = !data.erro && ehCidadeFreteGratis(data.localidade, data.uf);
       if(!data.erro){
         document.getElementById(`endereco${suffix ? 'Input'+suffix : 'Input'}`).value = data.logradouro || '';
         document.getElementById(`bairro${suffix ? 'Input'+suffix : 'Input'}`).value = data.bairro || '';
@@ -896,6 +908,7 @@
       });
       if(!resp.ok) throw new Error('falha ao calcular frete');
       const data = await resp.json();
+      if(data.entregaLocal) entregaLocal = true;
       if(data.opcoes && data.opcoes.length > 0){
         const maisBarato = data.opcoes[0];
         freteCalculado = { preco: maisBarato.preco, servico: `${maisBarato.transportadora} ${maisBarato.servico}`, prazoDias: maisBarato.prazoDias };
