@@ -278,9 +278,34 @@
   }
   function round2(v){ return Math.round(v * 100) / 100; }
 
+  // Deixa os botões de cupom (carrinho e checkout) como APLICAR ou REMOVER, conforme o estado.
+  function atualizarBotoesCupom(){
+    [['cupomBtn','cupomInput'], ['cupomBtnEntrega','cupomInputEntrega']].forEach(([btnId, inputId]) => {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      if(btn) btn.textContent = cupomAtivo ? 'REMOVER' : 'APLICAR';
+      if(input){
+        input.value = cupomAtivo || '';
+        input.readOnly = !!cupomAtivo;
+      }
+    });
+  }
+
+  function removerCupom(mensagem){
+    cupomAtivo = null;
+    ['cupomMsg','cupomMsgEntrega'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el){ el.textContent = mensagem || 'Cupom removido.'; el.style.color = ''; }
+    });
+    atualizarBotoesCupom();
+    renderShippingSummary();
+    renderCart();
+  }
+
   function aplicarCupom(){
     const input = document.getElementById('cupomInput');
     const msg = document.getElementById('cupomMsg');
+    if(cupomAtivo){ removerCupom(); return; }
     const codigo = input.value.trim().toUpperCase();
     if(!codigo) return;
     if(CUPONS.hasOwnProperty(codigo)){
@@ -294,6 +319,7 @@
       msg.className = 'small';
       msg.style.color = '#B3261E';
     }
+    atualizarBotoesCupom();
     renderCart();
   }
 
@@ -812,6 +838,7 @@
   function aplicarCupomEntrega(){
     const input = document.getElementById('cupomInputEntrega');
     const msg = document.getElementById('cupomMsgEntrega');
+    if(cupomAtivo){ removerCupom(); return; }
     const codigo = input.value.trim().toUpperCase();
     if(!codigo) return;
     if(CUPONS.hasOwnProperty(codigo)){
@@ -823,6 +850,7 @@
       msg.textContent = 'Cupom inválido.';
       msg.style.color = '#B3261E';
     }
+    atualizarBotoesCupom();
     renderShippingSummary();
     renderCart();
   }
@@ -863,6 +891,7 @@
     `;
     modalOverlay.classList.add('show');
     renderShippingSummary();
+    atualizarBotoesCupom();
     document.getElementById('cupomBtnEntrega').onclick = aplicarCupomEntrega;
     document.getElementById('cupomInputEntrega').addEventListener('keydown', (e) => {
       if(e.key === 'Enter'){ e.preventDefault(); aplicarCupomEntrega(); }
@@ -950,7 +979,9 @@
           .maybeSingle();
         if(error) throw error;
         if(usoAnterior){
-          if(msgEl) msgEl.textContent = `O cupom ${cupomAtivo} já foi usado com esse e-mail. Remova o cupom no carrinho pra continuar.`;
+          const codigoUsado = cupomAtivo;
+          removerCupom(`O cupom ${codigoUsado} já foi usado com esse e-mail e foi removido.`);
+          if(msgEl) msgEl.textContent = `O cupom ${codigoUsado} já foi usado com esse e-mail, então tiramos o desconto. Confira o novo total e clique em IR PARA O PAGAMENTO de novo.`;
           submitBtn.disabled = false;
           submitBtn.textContent = 'IR PARA O PAGAMENTO';
           return;
