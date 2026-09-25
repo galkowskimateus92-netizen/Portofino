@@ -11,6 +11,25 @@ const PACOTE = { height: 7, width: 15, length: 23, weight: 0.3 };
 // A partir desse valor de subtotal, o frete calculado é zerado (a loja absorve o custo).
 const FRETE_GRATIS_ACIMA_DE = 250;
 
+// Entrega grátis para a cidade da loja (qualquer valor de compra).
+const CIDADE_FRETE_GRATIS = { cidade: 'sao bento do sul', uf: 'SC' };
+
+function normalizar(txt) {
+  return String(txt || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
+// Consulta o ViaCEP pra saber se o CEP é da cidade com frete grátis.
+async function ehEntregaLocal(cep) {
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    if (!r.ok) return false;
+    const d = await r.json();
+    return !d.erro && normalizar(d.localidade) === CIDADE_FRETE_GRATIS.cidade && d.uf === CIDADE_FRETE_GRATIS.uf;
+  } catch (e) {
+    return false;
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -29,6 +48,18 @@ exports.handler = async (event) => {
     const cep = String(cepDestino || '').replace(/\D/g, '');
     if (cep.length !== 8) {
       return { statusCode: 400, body: JSON.stringify({ error: 'CEP inválido.' }) };
+    }
+
+    // São Bento do Sul/SC: frete grátis, sem consultar a Melhor Envio.
+    if (await ehEntregaLocal(cep)) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          opcoes: [{ servico: 'Entrega local', transportadora: 'Portofino', preco: 0, prazoDias: null }],
+          gratisAplicado: true,
+          entregaLocal: true,
+        }),
+      };
     }
 
     const resp = await fetch(MELHOR_ENVIO_URL, {
