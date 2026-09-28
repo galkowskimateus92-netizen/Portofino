@@ -26,7 +26,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { items, external_reference, payer } = JSON.parse(event.body || '{}');
+    const { items, external_reference, payer, entrega } = JSON.parse(event.body || '{}');
     if (!Array.isArray(items) || items.length === 0) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Carrinho vazio.' }) };
     }
@@ -94,9 +94,20 @@ exports.handler = async (event) => {
     // Guarda o e-mail também em "metadata": o Mercado Pago às vezes não devolve
     // o payer.email no pagamento final (ex: pagamentos como visitante), então isso
     // garante que o webhook sempre consiga mandar o e-mail de confirmação certo.
-    if (payer && payer.email) {
-      preferenceBody.metadata = { comprador_email: payer.email };
+    const metadata = {};
+    if (payer && payer.email) metadata.comprador_email = payer.email;
+    if (payer && payer.name) metadata.comprador_nome = String(payer.name).slice(0, 120);
+    // Endereço e prazo vão junto pro webhook poder montar o e-mail de confirmação completo
+    if (entrega && typeof entrega === 'object') {
+      const campo = (v) => String(v || '').slice(0, 200);
+      metadata.entrega_endereco = campo(entrega.endereco);
+      metadata.entrega_bairro = campo(entrega.bairro);
+      metadata.entrega_cidade = campo(entrega.cidade);
+      metadata.entrega_uf = campo(entrega.uf);
+      metadata.entrega_cep = campo(entrega.cep);
+      metadata.entrega_prazo = campo(entrega.prazo);
     }
+    if (Object.keys(metadata).length > 0) preferenceBody.metadata = metadata;
 
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
