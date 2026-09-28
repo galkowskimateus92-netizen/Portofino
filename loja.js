@@ -1083,17 +1083,9 @@
         await supabaseClient.from('perfis').upsert(dadosPerfil);
         currentProfile = dadosPerfil;
       }catch(err){ /* não trava a compra se isso falhar */ }
-
-      try{
-        await supabaseClient.from('pedidos').insert({
-          user_id: currentUser.id,
-          numero_pedido: orderNumber,
-          itens: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
-          total: subtotal - desconto + frete,
-          status: 'pendente',
-        });
-      }catch(err){ /* não trava a compra se isso falhar */ }
     }
+    // O registro do pedido (de todo mundo, logado ou não) agora é feito no servidor,
+    // na função create-preference — assim ele aparece na página de admin.
 
     // Resumo do pedido, lido pelas páginas success/pending (e o carrinho só é limpo lá, depois que o pedido existe)
     const entrega = {
@@ -1103,6 +1095,8 @@
       cidade: fd.get('cidade') || '',
       uf: fd.get('estado') || '',
       cep: fd.get('cep') || '',
+      cpf: fd.get('cpf') || '',
+      telefone: fd.get('telefone') || '',
       prazo: entregaLocal ? 'Entrega local em São Bento do Sul' : (freteCalculado?.prazoDias ? `${freteCalculado.prazoDias} dias úteis após o envio` : ''),
     };
     try{
@@ -1130,14 +1124,22 @@
       if(frete > 0){
         items.push({ name:'Frete', qty:1, price:frete });
       }
+      // Se estiver logado, manda o token pro servidor ligar o pedido à conta do cliente
+      const headers = { 'Content-Type':'application/json' };
+      try{
+        const { data:{ session } } = await supabaseClient.auth.getSession();
+        if(session?.access_token) headers.Authorization = 'Bearer ' + session.access_token;
+      }catch(err){ /* segue como visitante */ }
       const resp = await fetch('/.netlify/functions/create-preference', {
         method:'POST',
-        headers:{ 'Content-Type':'application/json' },
+        headers,
         body: JSON.stringify({
           items: items,
           external_reference: orderNumber,
           payer: payer,
-          entrega: entrega || null
+          entrega: entrega || null,
+          cupom: cupomAtivo || null,
+          itensPedido: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price }))
         })
       });
       const data = await resp.json();

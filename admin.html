@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin — Portofino</title>
+<link rel="icon" type="image/jpeg" href="portofino-logo-pf.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#F6F4EE; color:#0D1B2A; font-family:'Montserrat',sans-serif; font-size:14px; }
+  header{ background:#0D1B2A; color:#F6F4EE; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:5; }
+  header h1{ font-family:'Cinzel',serif; font-size:15px; letter-spacing:3px; margin:0; font-weight:500; }
+  header button{ background:none; border:1px solid rgba(246,244,238,.4); color:#F6F4EE; font-size:10px; letter-spacing:1.5px; padding:6px 10px; cursor:pointer; }
+  main{ max-width:720px; margin:0 auto; padding:16px; }
+
+  .login{ max-width:340px; margin:18vh auto 0; text-align:center; }
+  .login h1{ font-family:'Cinzel',serif; letter-spacing:4px; font-size:20px; }
+  input{ width:100%; padding:12px; border:1px solid #CFC7B6; background:#fff; font:inherit; border-radius:2px; }
+  .btn{ background:#0D1B2A; color:#F6F4EE; border:none; padding:12px 18px; font-size:11px; letter-spacing:2px; cursor:pointer; border-radius:2px; font-family:inherit; font-weight:600; }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  .btn.outline{ background:transparent; color:#0D1B2A; border:1px solid #0D1B2A; }
+  .btn.small{ padding:7px 10px; font-size:10px; letter-spacing:1px; }
+  .err{ color:#B3261E; font-size:12px; min-height:18px; margin-top:8px; }
+
+  .tabs{ display:flex; gap:6px; overflow-x:auto; margin-bottom:16px; padding-bottom:2px; }
+  .tab{ flex:0 0 auto; background:#fff; border:1px solid #E2DCCF; padding:9px 12px; font-size:11px; letter-spacing:1px; cursor:pointer; font-family:inherit; font-weight:600; color:#0D1B2A; }
+  .tab.active{ background:#0D1B2A; color:#F6F4EE; border-color:#0D1B2A; }
+  .tab .n{ display:inline-block; min-width:18px; margin-left:4px; padding:1px 5px; border-radius:9px; background:#B08A4E; color:#fff; font-size:10px; }
+  .tab .n.zero{ background:#CFC7B6; }
+
+  .card{ background:#fff; border:1px solid #E6E1D6; padding:14px 16px; margin-bottom:12px; }
+  .top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; }
+  .num{ font-weight:600; letter-spacing:1px; }
+  .date{ font-size:12px; opacity:.6; }
+  .items{ margin:6px 0 10px; }
+  .money{ font-size:13px; }
+  .money .warn{ color:#B3261E; font-weight:600; }
+  .addr{ background:#F6F4EE; padding:10px 84px 10px 12px; font-size:13px; line-height:1.55; position:relative; margin:10px 0; white-space:pre-line; }
+  .addr .copy{ position:absolute; top:8px; right:8px; }
+  .contact{ font-size:12.5px; line-height:1.7; }
+  .contact a{ color:#0D1B2A; }
+  .action{ display:flex; gap:8px; margin-top:12px; }
+  .action input{ flex:1; text-transform:uppercase; }
+  .track{ font-size:12.5px; margin-top:8px; }
+  .track a{ color:#0D1B2A; }
+  .empty{ text-align:center; opacity:.6; padding:40px 0; }
+  .toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0D1B2A; color:#F6F4EE; padding:10px 16px; font-size:12.5px; border-radius:2px; opacity:0; transition:opacity .25s; pointer-events:none; max-width:90vw; text-align:center; }
+  .toast.show{ opacity:1; }
+  .pill{ font-size:10px; letter-spacing:1px; padding:2px 7px; border-radius:9px; background:#E2DCCF; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="telaLogin" class="login">
+  <h1>PORTOFINO</h1>
+  <p style="opacity:.7; font-size:12px; letter-spacing:2px;">PAINEL DE PEDIDOS</p>
+  <form id="loginForm">
+    <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" required>
+    <button class="btn" style="width:100%; margin-top:10px;">ENTRAR</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
+<div id="telaPainel" hidden>
+  <header>
+    <h1>PEDIDOS</h1>
+    <div style="display:flex; gap:6px;">
+      <button onclick="carregar()">ATUALIZAR</button>
+      <button onclick="sair()">SAIR</button>
+    </div>
+  </header>
+  <main>
+    <div class="tabs" id="tabs"></div>
+    <div id="lista"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const ABAS = [
+    { id:'aprovado', label:'A ENVIAR' },
+    { id:'enviado', label:'ENVIADOS' },
+    { id:'pendente', label:'AGUARDANDO PAGAMENTO' },
+    { id:'entregue', label:'ENTREGUES' },
+    { id:'cancelado', label:'CANCELADOS' },
+  ];
+  let senha = '';
+  let pedidos = [];
+  let abaAtual = 'aprovado';
+
+  try{ senha = sessionStorage.getItem('pf_admin') || ''; }catch(e){}
+
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const brl = v => Number(v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  const data = d => new Date(d).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  async function api(method, body){
+    const r = await fetch('/.netlify/functions/admin-pedidos', {
+      method,
+      headers: { 'Content-Type':'application/json', 'x-admin-senha': senha },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const j = await r.json().catch(() => ({}));
+    if(r.status === 401){ sair(); throw new Error('Senha incorreta.'); }
+    if(!r.ok) throw new Error(j.error || 'Erro no servidor.');
+    return j;
+  }
+
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    senha = $('senha').value;
+    $('loginErr').textContent = '';
+    try{
+      await carregar();
+      try{ sessionStorage.setItem('pf_admin', senha); }catch(e){}
+    }catch(err){ $('loginErr').textContent = err.message; }
+  });
+
+  function sair(){
+    senha = '';
+    try{ sessionStorage.removeItem('pf_admin'); }catch(e){}
+    $('telaPainel').hidden = true; $('telaLogin').hidden = false;
+  }
+
+  async function carregar(){
+    const j = await api('GET');
+    pedidos = j.pedidos;
+    $('telaLogin').hidden = true; $('telaPainel').hidden = false;
+    render();
+  }
+
+  function trocarAba(id){ abaAtual = id; render(); }
+
+  function textoEndereco(p){
+    const e = p.entrega || {};
+    if(!e.endereco) return '';
+    return [
+      e.nome || p.nome,
+      `${e.endereco}${e.bairro ? ' — ' + e.bairro : ''}`,
+      `${e.cidade}/${e.uf} — CEP ${e.cep}`,
+    ].filter(Boolean).join('\n');
+  }
+
+  function copiarEndereco(id){
+    const p = pedidos.find(x => String(x.id) === String(id));
+    const e = p.entrega || {};
+    const txt = textoEndereco(p) + (e.cpf ? `\nCPF: ${e.cpf}` : '') + (p.telefone ? `\nTel: ${p.telefone}` : '');
+    navigator.clipboard.writeText(txt).then(() => toast('Endereço copiado'), () => toast('Não foi possível copiar'));
+  }
+
+  function card(p){
+    const e = p.entrega || {};
+    const itens = (p.itens || []).map(i => `${i.qty}x ${esc(i.name)}`).join('<br>');
+    const pagoDiferente = p.valor_pago != null && Math.abs(Number(p.valor_pago) - Number(p.total)) > 0.05;
+    const endereco = textoEndereco(p);
+    const temCampo = p.status === 'aprovado';
+    return `
+    <div class="card">
+      <div class="top">
+        <span class="num">${esc(p.numero_pedido)}</span>
+        <span class="date">${data(p.criado_em)}</span>
+      </div>
+      <div class="items">${itens}</div>
+      <div class="money">
+        Total: <strong>${brl(p.total)}</strong>${p.cupom ? ` · cupom ${esc(p.cupom)}` : ''}
+        ${p.valor_pago != null ? ` · pago: <span class="${pagoDiferente ? 'warn' : ''}">${brl(p.valor_pago)}${pagoDiferente ? ' ⚠ confira' : ''}</span>` : ''}
+      </div>
+      ${endereco ? `
+        <div class="addr"><button class="btn outline small copy" onclick="copiarEndereco('${p.id}')">COPIAR</button>${esc(endereco)}${e.prazo ? `\n<span style="opacity:.6">Frete: ${esc(e.prazo)}</span>` : ''}</div>` : `<div class="addr" style="opacity:.7">Pedido antigo, sem endereço salvo aqui. Veja no Netlify Forms → "pedidos".</div>`}
+      <div class="contact">
+        ${p.nome ? esc(p.nome) + '<br>' : ''}
+        ${p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a><br>` : ''}
+        ${p.telefone ? `<a href="https://wa.me/55${esc(String(p.telefone).replace(/\D/g,'').replace(/^55/,''))}" target="_blank">${esc(p.telefone)} (WhatsApp)</a><br>` : ''}
+        ${e.cpf ? 'CPF: ' + esc(e.cpf) : ''}
+      </div>
+      ${p.codigo_rastreio ? `<div class="track">Rastreio: <a href="https://www.melhorrastreio.com.br/rastreio/${encodeURIComponent(p.codigo_rastreio)}" target="_blank"><strong>${esc(p.codigo_rastreio)}</strong></a>${p.enviado_em ? ' · enviado ' + data(p.enviado_em) : ''}</div>` : ''}
+      ${temCampo ? `
+        <div class="action">
+          <input id="cod-${p.id}" placeholder="Código de rastreio" autocomplete="off">
+          <button class="btn" onclick="marcarEnviado('${p.id}', this)">ENVIADO</button>
+        </div>
+        <div style="font-size:11px; opacity:.6; margin-top:6px;">Ao marcar como enviado, o cliente recebe um e-mail com o rastreio.</div>
+        ${/s[aã]o bento do sul/i.test(e.cidade || '') ? `<div class="action"><button class="btn outline small" onclick="marcarEntregue('${p.id}', this)">ENTREGA LOCAL: MARCAR COMO ENTREGUE EM MÃOS</button></div>` : ''}` : ''}
+      ${p.status === 'enviado' ? `
+        <div class="action"><button class="btn outline" onclick="marcarEntregue('${p.id}', this)">MARCAR COMO ENTREGUE</button></div>` : ''}
+      ${p.status === 'pendente' ? `<div style="margin-top:8px;"><span class="pill">Ainda não pago — não envie</span></div>` : ''}
+    </div>`;
+  }
+
+  function render(){
+    // Pendentes com mais de 7 dias não aparecem (Pix/boleto que nunca foi pago)
+    const limite = Date.now() - 7*24*60*60*1000;
+    const visiveis = pedidos.filter(p => !(p.status === 'pendente' && new Date(p.criado_em).getTime() < limite));
+    $('tabs').innerHTML = ABAS.map(a => {
+      const n = visiveis.filter(p => p.status === a.id).length;
+      return `<button class="tab ${a.id === abaAtual ? 'active' : ''}" onclick="trocarAba('${a.id}')">${a.label}<span class="n ${n ? '' : 'zero'}">${n}</span></button>`;
+    }).join('');
+    // "A enviar": mais antigo primeiro (quem comprou antes, sai antes)
+    let lista = visiveis.filter(p => p.status === abaAtual);
+    if(abaAtual === 'aprovado') lista = lista.slice().sort((a,b) => new Date(a.criado_em) - new Date(b.criado_em));
+    $('lista').innerHTML = lista.length ? lista.map(card).join('') : '<div class="empty">Nada por aqui.</div>';
+  }
+
+  async function marcarEnviado(id, btn){
+    const p = pedidos.find(x => String(x.id) === String(id));
+    const codigo = $('cod-' + id).value.trim();
+    if(codigo.replace(/\s/g,'').length < 8){ toast('Cole o código de rastreio'); return; }
+    if(!confirm(`Marcar ${p.numero_pedido} como enviado e mandar o rastreio ${codigo.toUpperCase()} pro cliente?`)) return;
+    btn.disabled = true; btn.textContent = '...';
+    try{
+      const j = await api('POST', { acao:'enviar', numero:p.numero_pedido, codigo });
+      toast(j.emailEnviado ? 'Enviado! Cliente avisado por e-mail.' : 'Marcado como enviado (e-mail NÃO foi enviado — avise o cliente).');
+      await carregar();
+    }catch(err){ toast(err.message); btn.disabled = false; btn.textContent = 'ENVIADO'; }
+  }
+
+  async function marcarEntregue(id, btn){
+    const p = pedidos.find(x => String(x.id) === String(id));
+    btn.disabled = true;
+    try{
+      await api('POST', { acao:'entregue', numero:p.numero_pedido });
+      toast('Marcado como entregue');
+      await carregar();
+    }catch(err){ toast(err.message); btn.disabled = false; }
+  }
+
+  if(senha){ carregar().catch(() => {}); }
+</script>
+</body>
+</html>
