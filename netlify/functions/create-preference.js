@@ -12,6 +12,42 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Descobre qual cliente está logado a partir do token enviado pelo site (se houver)
+async function usuarioLogado(event) {
+  const auth = event.headers.authorization || event.headers.Authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  return error ? null : data.user;
+}
+
+async function registrarPedido({ event, external_reference, items, payer, entrega, cupom, itensPedido }) {
+  const user = await usuarioLogado(event);
+  const total = items.reduce((a, i) => a + Number(i.price) * Number(i.qty), 0);
+  const itens = Array.isArray(itensPedido) && itensPedido.length > 0
+    ? itensPedido.map((i) => ({ name: String(i.name), qty: Number(i.qty), price: Number(i.price) }))
+    : items.filter((i) => i.name !== 'Frete').map((i) => ({ name: String(i.name), qty: Number(i.qty), price: Number(i.price) }));
+  const e = entrega && typeof entrega === 'object' ? entrega : {};
+  const campo = (v) => String(v || '').slice(0, 200);
+
+  const { error } = await supabase.from('pedidos').insert({
+    user_id: user ? user.id : null,
+    numero_pedido: String(external_reference),
+    itens,
+    total: Math.round(total * 100) / 100,
+    status: 'pendente',
+    email: payer?.email ? String(payer.email).trim().toLowerCase() : null,
+    nome: payer?.name ? campo(payer.name) : null,
+    telefone: e.telefone ? campo(e.telefone) : null,
+    cupom: cupom ? campo(cupom) : null,
+    entrega: {
+      nome: campo(e.nome), cpf: campo(e.cpf), endereco: campo(e.endereco), bairro: campo(e.bairro),
+      cidade: campo(e.cidade), uf: campo(e.uf), cep: campo(e.cep), prazo: campo(e.prazo),
+    },
+  });
+  if (error) throw error;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -26,7 +62,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { items, external_reference, payer, entrega } = JSON.parse(event.body || '{}');
+    const { items, external_reference, payer, entrega, cupom, itensPedido } = JSON.parse(event.body || '{}');
     if (!Array.isArray(items) || items.length === 0) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Carrinho vazio.' }) };
     }
@@ -125,6 +161,16 @@ exports.handler = async (event) => {
         statusCode: mpResponse.status,
         body: JSON.stringify({ error: data }),
       };
+    }
+
+    // Registra o pedido no Supabase (todos os pedidos, logado ou visitante) — é daqui que
+    // saem o "Meus pedidos" do cliente e a página de admin. Se falhar, não trava a venda.
+    if (external_reference) {
+      try {
+        await registrarPedido({ event, external_reference, items, payer, entrega, cupom, itensPedido });
+      } catch (err) {
+        console.error('Pedidos: erro ao registrar pedido:', err.message);
+      }
     }
 
     return {
