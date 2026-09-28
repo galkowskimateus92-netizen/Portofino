@@ -4,7 +4,7 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-  { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+  { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:1.00, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
 ];
 
   // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
