@@ -3,37 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
 <title>Pedido confirmado — Portofino</title>
+<link rel="icon" type="image/jpeg" href="portofino-logo-pf.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital@1&family=Cinzel:wght@500&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    background:#F6F4EE; color:#0D1B2A; font-family:'Montserrat',sans-serif; text-align:center; padding:20px; }
-  .box{ max-width:420px; animation: pfFadeUp .5s cubic-bezier(.22,.61,.36,1) both; }
-  @keyframes pfFadeUp{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:translateY(0);} }
-  .anchor{ font-size:42px; color:#B08A4E; margin-bottom:18px; animation: pfAnchorPop .55s .1s cubic-bezier(.34,1.56,.64,1) both; }
-  @keyframes pfAnchorPop{ from{ opacity:0; transform:scale(.4) rotate(-20deg);} to{ opacity:1; transform:scale(1) rotate(0);} }
-  a{ transition: transform .2s ease, opacity .2s ease; }
-  a:hover{ transform: translateY(-2px); opacity:.9; }
-  h1{ font-family:'Cinzel',serif; letter-spacing:3px; font-size:22px; margin-bottom:10px; }
-  p{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:17px; opacity:0.8; margin-bottom:26px; }
-  a{ display:inline-block; background:#0D1B2A; color:#F6F4EE; padding:13px 28px; font-size:11px;
-    letter-spacing:2px; text-decoration:none; border-radius:2px; }
-</style>
+<link rel="stylesheet" href="pos-compra.css">
 </head>
-<body>
+<body data-modo="aprovado">
   <div class="box">
-    <div class="anchor">⚓</div>
+    <div class="anchor pop">⚓</div>
     <h1>PEDIDO CONFIRMADO</h1>
-    <p id="orderMsg">Obrigado por escolher a Portofino. Você vai receber um e-mail com os detalhes do pedido em breve.</p>
-    <a href="/">VOLTAR PARA A LOJA</a>
+    <p class="lead">Grazie! Seu pagamento foi aprovado e seu boné já vai entrar em preparação.</p>
+    <div class="num" id="numPedido" hidden></div>
+    <div class="timeline"><div class="step done"><div class="bar"></div><span>PAGO</span></div><div class="step now"><div class="bar"></div><span>EM PREPARAÇÃO</span></div><div class="step "><div class="bar"></div><span>ENVIADO</span></div><div class="step "><div class="bar"></div><span>ENTREGUE</span></div></div>
+    <div class="card" id="resumo" hidden></div>
+    <div class="card" id="entrega" hidden></div>
+    <ul class="next">
+      <li>Você vai receber um e-mail de confirmação com os detalhes do pedido.</li>
+      <li>Despachamos em até 5 dias úteis.</li>
+      <li>Quando sair daqui, te enviamos o código de rastreio.</li>
+    </ul>
+    <div class="actions">
+      <a class="btn" id="btnPedidos" href="/?conta=pedidos" hidden>ACOMPANHAR MEUS PEDIDOS</a>
+      <a class="btn outline" href="/">VOLTAR PARA A LOJA</a>
+    </div>
+    <div class="foot">
+      Dúvidas? <a id="mailDuvida" href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a><br>
+      Siga a gente: <a href="https://instagram.com/portofino.company" target="_blank" rel="noopener">@portofino.company</a>
+    </div>
   </div>
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get('external_reference');
-    if(ref){
-      document.getElementById('orderMsg').innerHTML =
-        'Pedido <strong>' + ref + '</strong> confirmado. Você vai receber um e-mail com os detalhes em breve.';
-    }
-  </script>
+  <script src="pos-compra.js"></script>
 </body>
 </html>

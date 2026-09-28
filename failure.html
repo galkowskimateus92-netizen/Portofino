@@ -3,29 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
 <title>Pagamento não concluído — Portofino</title>
+<link rel="icon" type="image/jpeg" href="portofino-logo-pf.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital@1&family=Cinzel:wght@500&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    background:#F6F4EE; color:#0D1B2A; font-family:'Montserrat',sans-serif; text-align:center; padding:20px; }
-  .box{ max-width:420px; animation: pfFadeUp .5s cubic-bezier(.22,.61,.36,1) both; }
-  @keyframes pfFadeUp{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:translateY(0);} }
-  .anchor{ font-size:42px; color:#5B1E2D; margin-bottom:18px; animation: pfAnchorPop .5s .1s cubic-bezier(.34,1.56,.64,1) both; }
-  @keyframes pfAnchorPop{ from{ opacity:0; transform:scale(.5) rotate(-15deg);} to{ opacity:1; transform:scale(1) rotate(0);} }
-  a{ transition: transform .2s ease, opacity .2s ease; }
-  a:hover{ transform: translateY(-2px); opacity:.9; }
-  h1{ font-family:'Cinzel',serif; letter-spacing:3px; font-size:22px; margin-bottom:10px; }
-  p{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:17px; opacity:0.8; margin-bottom:26px; }
-  a{ display:inline-block; background:#0D1B2A; color:#F6F4EE; padding:13px 28px; font-size:11px;
-    letter-spacing:2px; text-decoration:none; border-radius:2px; }
-</style>
+<link rel="stylesheet" href="pos-compra.css">
 </head>
-<body>
+<body data-modo="falha">
   <div class="box">
-    <div class="anchor">⚓</div>
+    <div class="anchor pop wine">⚓</div>
     <h1>PAGAMENTO NÃO CONCLUÍDO</h1>
-    <p>Algo deu errado ou o pagamento foi cancelado. Nenhuma cobrança foi feita — você pode tentar novamente.</p>
-    <a href="/">VOLTAR PARA A LOJA</a>
+    <p class="lead">O pagamento foi recusado ou cancelado. Nenhuma cobrança foi feita — seu carrinho continua salvo.</p>
+    <ul class="next">
+      <li>Confira os dados do cartão ou tente outro meio (Pix costuma ser aprovado na hora).</li>
+      <li>Se o cartão foi recusado, o banco às vezes bloqueia compras online — vale checar o app do banco.</li>
+    </ul>
+    <div class="actions">
+      <a class="btn" href="/?carrinho=1">TENTAR NOVAMENTE</a>
+      <a class="btn outline" href="/">VOLTAR PARA A LOJA</a>
+    </div>
+    <div class="foot">
+      Dúvidas? <a id="mailDuvida" href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a><br>
+      Siga a gente: <a href="https://instagram.com/portofino.company" target="_blank" rel="noopener">@portofino.company</a>
+    </div>
   </div>
+  <script src="pos-compra.js"></script>
 </body>
 </html>

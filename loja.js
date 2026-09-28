@@ -696,30 +696,55 @@
         .from('pedidos').select('*').eq('user_id', currentUser.id).order('criado_em', { ascending:false });
       if(error) throw error;
 
-      // Pedidos pendentes com mais de 1 hora somem da lista (e são apagados de verdade do banco)
-      const umaHoraAtras = Date.now() - 60 * 60 * 1000;
-      const expirados = (data || []).filter(p => p.status === 'pendente' && new Date(p.criado_em).getTime() < umaHoraAtras);
-      if(expirados.length > 0){
-        supabaseClient.from('pedidos').delete().in('id', expirados.map(p => p.id)).then(() => {}).catch(() => {});
-      }
-      const idsExpirados = new Set(expirados.map(p => p.id));
-      currentPedidos = (data || []).filter(p => !idsExpirados.has(p.id));
+      // Pedidos "aguardando pagamento" ficam visíveis por 4 dias (boleto leva até 3 dias úteis pra compensar).
+      // Depois disso só somem da lista — NÃO são apagados do banco, pra o webhook ainda conseguir atualizar.
+      const limitePendente = Date.now() - 4 * 24 * 60 * 60 * 1000;
+      currentPedidos = (data || []).filter(p =>
+        !(p.status === 'pendente' && new Date(p.criado_em).getTime() < limitePendente) && p.status !== 'cancelado'
+      );
 
       if(currentPedidos.length === 0){
         el.innerHTML = '<p class="small">Você ainda não fez nenhum pedido.</p>';
         return;
       }
-      const statusLabel = { pendente:'Aguardando pagamento', aprovado:'Pago' };
-      el.innerHTML = currentPedidos.map(p => `
-        <div class="review-item" ${p.status === 'aprovado' ? `onclick="openPedidoDetail('${p.id}')" style="cursor:pointer;"` : ''}>
-          <div class="review-name">Pedido ${p.numero_pedido} — ${statusLabel[p.status] || p.status}${p.status === 'aprovado' ? ' →' : ''}</div>
+      el.innerHTML = currentPedidos.map(p => {
+        const clicavel = STATUS_DETALHE.includes(p.status);
+        return `
+        <div class="review-item" ${clicavel ? `onclick="openPedidoDetail('${p.id}')" style="cursor:pointer;"` : ''}>
+          <div class="review-name">Pedido ${p.numero_pedido} — ${STATUS_LABEL[p.status] || p.status}${clicavel ? ' →' : ''}</div>
           <p class="review-comment">${(p.itens || []).map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
           <p class="review-comment"><strong>${formatPrice(Number(p.total))}</strong> — ${new Date(p.criado_em).toLocaleDateString('pt-BR')}</p>
-        </div>
-      `).join('');
+          ${p.status === 'pendente' ? '<p class="small" style="margin-top:4px;">Pagou por Pix ou boleto? A confirmação pode levar alguns minutos (Pix) ou até 3 dias úteis (boleto).</p>' : ''}
+        </div>`;
+      }).join('');
     }catch(err){
       el.innerHTML = '<p class="small">Não foi possível carregar seus pedidos agora.</p>';
     }
+  }
+
+  const STATUS_LABEL = { pendente:'Aguardando pagamento', aprovado:'Pago — em preparação', enviado:'Enviado', entregue:'Entregue', cancelado:'Cancelado' };
+  const STATUS_DETALHE = ['aprovado', 'enviado', 'entregue'];
+  const ETAPAS_PEDIDO = [
+    { chave:'aprovado', label:'Pago' },
+    { chave:'preparando', label:'Em preparação' },
+    { chave:'enviado', label:'Enviado' },
+    { chave:'entregue', label:'Entregue' },
+  ];
+
+  // Linha do tempo simples: pago → em preparação → enviado → entregue
+  function timelinePedido(status){
+    const nivel = { aprovado:1, enviado:2, entregue:3 }[status] ?? 0;
+    return `<div style="display:flex; gap:6px; margin:6px 0 18px;">${ETAPAS_PEDIDO.map((e, idx) => {
+      const feito = idx <= nivel;
+      return `<div style="flex:1; text-align:center;">
+        <div style="height:3px; background:${feito ? '#B08A4E' : 'var(--line)'}; margin-bottom:6px;"></div>
+        <span style="font-size:10px; letter-spacing:1px; opacity:${feito ? 1 : .45};">${e.label.toUpperCase()}</span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function escHtml(v){
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   }
 
   function openPedidoDetail(id){
@@ -727,13 +752,20 @@
     if(!pedido) return;
     const el = document.getElementById('accountTabContent');
     const itens = pedido.itens || [];
+    const rastreio = (pedido.codigo_rastreio || '').trim();
     el.innerHTML = `
       <button class="btn outline" style="margin-bottom:18px;" onclick="renderPedidosTab()">← VOLTAR AOS PEDIDOS</button>
-      <div class="review-name" style="font-size:13px;">Pedido ${pedido.numero_pedido} — Pago</div>
-      <p class="small" style="margin-bottom:16px;">${new Date(pedido.criado_em).toLocaleDateString('pt-BR')}</p>
+      <div class="review-name" style="font-size:13px;">Pedido ${escHtml(pedido.numero_pedido)} — ${STATUS_LABEL[pedido.status] || pedido.status}</div>
+      <p class="small" style="margin-bottom:12px;">${new Date(pedido.criado_em).toLocaleDateString('pt-BR')}</p>
+      ${timelinePedido(pedido.status)}
+      ${rastreio ? `
+        <div style="background:var(--line); padding:12px 14px; margin-bottom:16px; font-size:12.5px;">
+          Código de rastreio: <strong>${escHtml(rastreio)}</strong><br>
+          <a href="https://www.melhorrastreio.com.br/rastreio/${encodeURIComponent(rastreio)}" target="_blank" rel="noopener">Acompanhar entrega →</a>
+        </div>` : (pedido.status === 'aprovado' ? '<p class="small" style="margin-bottom:16px;">Seu pedido está sendo preparado. Assim que for despachado, o código de rastreio aparece aqui.</p>' : '')}
       ${itens.map(i => `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:12.5px;">
-          <span>${i.qty}x ${i.name}</span>
+          <span>${i.qty}x ${escHtml(i.name)}</span>
           <span>${formatPrice(i.price * i.qty)}</span>
         </div>
       `).join('')}
@@ -741,6 +773,7 @@
         <span>Total</span>
         <span>${formatPrice(Number(pedido.total))}</span>
       </div>
+      <p class="small" style="margin-top:18px;">Alguma dúvida? Escreva pra <a href="mailto:companyportofino@gmail.com?subject=Pedido%20${encodeURIComponent(pedido.numero_pedido)}">companyportofino@gmail.com</a> com o número do pedido.</p>
     `;
   }
 
@@ -799,7 +832,12 @@
   }
 
   document.getElementById('accountBtn')?.addEventListener('click', openAccountModal);
-  initAuth();
+  initAuth().then(() => {
+    // Links vindos das páginas pós-compra: ?conta=pedidos abre "Meus pedidos", ?carrinho=1 abre o carrinho
+    const qs = new URLSearchParams(window.location.search);
+    if(qs.get('conta')) openAccountModal();
+    else if(qs.get('carrinho') && cart.length > 0) openDrawer();
+  });
 
   // Frete calculado em tempo real (via Melhor Envio) para o CEP digitado no checkout.
   // null enquanto não foi calculado ainda — nesse caso usamos o valor fixo como estimativa.
@@ -1057,10 +1095,33 @@
       }catch(err){ /* não trava a compra se isso falhar */ }
     }
 
-    startCheckout(orderNumber, payer, frete, percentualDesconto);
+    // Resumo do pedido, lido pelas páginas success/pending (e o carrinho só é limpo lá, depois que o pedido existe)
+    const entrega = {
+      nome: fd.get('nome') || '',
+      endereco: `${fd.get('endereco') || ''}, ${fd.get('numero') || ''}${fd.get('complemento') ? ' — ' + fd.get('complemento') : ''}`,
+      bairro: fd.get('bairro') || '',
+      cidade: fd.get('cidade') || '',
+      uf: fd.get('estado') || '',
+      cep: fd.get('cep') || '',
+      prazo: entregaLocal ? 'Entrega local em São Bento do Sul' : (freteCalculado?.prazoDias ? `${freteCalculado.prazoDias} dias úteis após o envio` : ''),
+    };
+    try{
+      localStorage.setItem('portofino_ultimo_pedido', JSON.stringify({
+        numero: orderNumber,
+        itens: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
+        subtotal, desconto, frete,
+        total: subtotal - desconto + frete,
+        cupom: cupomAtivo || '',
+        entrega,
+        logado: !!currentUser,
+        criadoEm: Date.now(),
+      }));
+    }catch(err){ /* sem localStorage a página de sucesso só mostra a mensagem padrão */ }
+
+    startCheckout(orderNumber, payer, frete, percentualDesconto, entrega);
   }
 
-  async function startCheckout(orderNumber, payer, frete, percentualDesconto){
+  async function startCheckout(orderNumber, payer, frete, percentualDesconto, entrega){
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
     try{
@@ -1075,7 +1136,8 @@
         body: JSON.stringify({
           items: items,
           external_reference: orderNumber,
-          payer: payer
+          payer: payer,
+          entrega: entrega || null
         })
       });
       const data = await resp.json();
