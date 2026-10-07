@@ -49,6 +49,27 @@
   .toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0D1B2A; color:#F6F4EE; padding:10px 16px; font-size:12.5px; border-radius:2px; opacity:0; transition:opacity .25s; pointer-events:none; max-width:90vw; text-align:center; }
   .toast.show{ opacity:1; }
   .pill{ font-size:10px; letter-spacing:1px; padding:2px 7px; border-radius:9px; background:#E2DCCF; }
+
+  /* ===== Resumo de vendas ===== */
+  .periodo{ display:flex; gap:6px; margin-bottom:14px; }
+  .periodo button{ background:transparent; border:1px solid #CFC7B6; padding:6px 10px; font-size:11px; letter-spacing:1px; cursor:pointer; font-family:inherit; color:#0D1B2A; }
+  .periodo button.on{ background:#0D1B2A; color:#F6F4EE; border-color:#0D1B2A; }
+  .kpis{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:12px; }
+  @media (min-width:600px){ .kpis{ grid-template-columns:repeat(4, 1fr); } }
+  .kpi{ background:#fff; border:1px solid #E6E1D6; padding:12px 14px; }
+  .kpi .lbl{ font-size:10px; letter-spacing:1.5px; opacity:.6; }
+  .kpi .val{ font-size:20px; font-weight:600; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .kpi .sub{ font-size:11px; opacity:.6; margin-top:2px; }
+  .secao{ background:#fff; border:1px solid #E6E1D6; padding:14px 16px; margin-bottom:12px; }
+  .secao h2{ font-size:11px; letter-spacing:1.5px; margin:0 0 10px; font-weight:600; opacity:.75; }
+  .chart{ position:relative; }
+  .chart svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .chart .tip{ position:absolute; pointer-events:none; background:#0D1B2A; color:#F6F4EE; font-size:11.5px; padding:6px 9px; border-radius:2px; white-space:nowrap; transform:translate(-50%, -100%); opacity:0; transition:opacity .12s; }
+  .chart .tip.show{ opacity:1; }
+  .linha{ display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-top:1px solid #F0ECE3; font-size:13px; }
+  .linha:first-of-type{ border-top:none; }
+  .linha span:last-child{ font-variant-numeric:tabular-nums; opacity:.8; }
+  .obs{ font-size:12.5px; line-height:1.7; }
   [hidden]{ display:none !important; }
 </style>
 </head>
@@ -82,6 +103,7 @@
 
 <script>
   const ABAS = [
+    { id:'resumo', label:'RESUMO' },
     { id:'aprovado', label:'A ENVIAR' },
     { id:'enviado', label:'ENVIADOS' },
     { id:'pendente', label:'AGUARDANDO PAGAMENTO' },
@@ -90,7 +112,8 @@
   ];
   let senha = '';
   let pedidos = [];
-  let abaAtual = 'aprovado';
+  let abaAtual = 'resumo';
+  let periodoDias = 30;
 
   try{ senha = sessionStorage.getItem('pf_admin') || ''; }catch(e){}
 
@@ -202,13 +225,133 @@
     const limite = Date.now() - 7*24*60*60*1000;
     const visiveis = pedidos.filter(p => !(p.status === 'pendente' && new Date(p.criado_em).getTime() < limite));
     $('tabs').innerHTML = ABAS.map(a => {
+      if(a.id === 'resumo') return `<button class="tab ${a.id === abaAtual ? 'active' : ''}" onclick="trocarAba('${a.id}')">${a.label}</button>`;
       const n = visiveis.filter(p => p.status === a.id).length;
       return `<button class="tab ${a.id === abaAtual ? 'active' : ''}" onclick="trocarAba('${a.id}')">${a.label}<span class="n ${n ? '' : 'zero'}">${n}</span></button>`;
     }).join('');
+    if(abaAtual === 'resumo'){ renderResumo(); return; }
     // "A enviar": mais antigo primeiro (quem comprou antes, sai antes)
     let lista = visiveis.filter(p => p.status === abaAtual);
     if(abaAtual === 'aprovado') lista = lista.slice().sort((a,b) => new Date(a.criado_em) - new Date(b.criado_em));
     $('lista').innerHTML = lista.length ? lista.map(card).join('') : '<div class="empty">Nada por aqui.</div>';
+  }
+
+
+  // ===================== RESUMO DE VENDAS =====================
+  const PAGOS = ['aprovado', 'enviado', 'entregue'];
+  const valorPedido = p => Number(p.valor_pago != null ? p.valor_pago : p.total) || 0;
+  const chaveDia = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; };
+  const pct = v => (v * 100).toLocaleString('pt-BR', { maximumFractionDigits:0 }) + '%';
+
+  function trocarPeriodo(d){ periodoDias = d; renderResumo(); }
+
+  function renderResumo(){
+    const inicio = new Date(); inicio.setHours(0,0,0,0); inicio.setDate(inicio.getDate() - (periodoDias - 1));
+    const doPeriodo = pedidos.filter(p => new Date(p.criado_em) >= inicio);
+    const pagos = doPeriodo.filter(p => PAGOS.includes(p.status));
+    const pendentes = doPeriodo.filter(p => p.status === 'pendente');
+    const faturamento = pagos.reduce((a,p) => a + valorPedido(p), 0);
+    const ticket = pagos.length ? faturamento / pagos.length : 0;
+    const unidades = pagos.reduce((a,p) => a + (p.itens || []).reduce((b,i) => b + Number(i.qty || 0), 0), 0);
+    const tentativas = doPeriodo.length;
+    const conversao = tentativas ? pagos.length / tentativas : 0;
+    const comCupom = pagos.filter(p => p.cupom).length;
+
+    // Faturamento por dia (dias sem venda = 0)
+    const dias = [];
+    for(let i = 0; i < periodoDias; i++){
+      const d = new Date(inicio); d.setDate(inicio.getDate() + i);
+      dias.push({ chave: chaveDia(d), data: d, valor: 0, pedidos: 0 });
+    }
+    const porChave = new Map(dias.map(d => [d.chave, d]));
+    pagos.forEach(p => { const d = porChave.get(chaveDia(p.criado_em)); if(d){ d.valor += valorPedido(p); d.pedidos++; } });
+
+    // Produtos e cidades
+    const produtos = new Map();
+    pagos.forEach(p => (p.itens || []).forEach(i => produtos.set(i.name, (produtos.get(i.name) || 0) + Number(i.qty || 0))));
+    const cidades = new Map();
+    pagos.forEach(p => { const e = p.entrega || {}; if(e.cidade){ const k = `${e.cidade}/${e.uf || ''}`; cidades.set(k, (cidades.get(k) || 0) + 1); } });
+    const top = (m, n) => [...m.entries()].sort((a,b) => b[1] - a[1]).slice(0, n);
+
+    const linhas = (arr, sufixo) => arr.length
+      ? arr.map(([k,v]) => `<div class="linha"><span>${esc(k)}</span><span>${v} ${sufixo}</span></div>`).join('')
+      : '<div class="obs" style="opacity:.6">Sem vendas no período.</div>';
+
+    $('lista').innerHTML = `
+      <div class="periodo">
+        ${[7,30,90].map(d => `<button class="${d === periodoDias ? 'on' : ''}" onclick="trocarPeriodo(${d})">${d} DIAS</button>`).join('')}
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">FATURAMENTO</div><div class="val">${brl(faturamento)}</div><div class="sub">pedidos pagos</div></div>
+        <div class="kpi"><div class="lbl">PEDIDOS PAGOS</div><div class="val">${pagos.length}</div><div class="sub">${unidades} ${unidades === 1 ? 'peça' : 'peças'}</div></div>
+        <div class="kpi"><div class="lbl">TICKET MÉDIO</div><div class="val">${brl(ticket)}</div><div class="sub">por pedido</div></div>
+        <div class="kpi"><div class="lbl">CONVERSÃO</div><div class="val">${tentativas ? pct(conversao) : '—'}</div><div class="sub">dos checkouts foram pagos</div></div>
+      </div>
+      <div class="secao">
+        <h2>FATURAMENTO POR DIA</h2>
+        <div class="chart" id="graficoDias"></div>
+      </div>
+      <div class="secao">
+        <h2>OBSERVAÇÕES</h2>
+        <div class="obs">
+          Aguardando pagamento: <strong>${pendentes.length}</strong> ${pendentes.length ? `(${brl(pendentes.reduce((a,p) => a + valorPedido(p), 0))})` : ''}<br>
+          Pedidos pagos com cupom: <strong>${comCupom}</strong>${pagos.length ? ` (${pct(comCupom / pagos.length)})` : ''}
+        </div>
+      </div>
+      <div class="secao"><h2>MAIS VENDIDOS</h2>${linhas(top(produtos, 5), 'un.')}</div>
+      <div class="secao"><h2>CIDADES</h2>${linhas(top(cidades, 5), 'pedidos')}</div>
+      <div style="font-size:11px; opacity:.55; margin:4px 0 20px;">Considera pedidos aprovados, enviados e entregues. Dados dos últimos 90 dias.</div>
+    `;
+    desenharGrafico($('graficoDias'), dias);
+  }
+
+  function desenharGrafico(el, dias){
+    const W = Math.max(280, el.clientWidth || 680), H = W < 500 ? 170 : 200, padL = 52, padR = 6, padT = 10, padB = 24;
+    const maxV = Math.max(...dias.map(d => d.valor), 0);
+    // Escala "redonda" pro eixo
+    const passo = maxV <= 0 ? 100 : Math.pow(10, Math.floor(Math.log10(maxV)));
+    const topo = maxV <= 0 ? 100 : Math.ceil(maxV / passo) * passo;
+    const n = dias.length, plotW = W - padL - padR, plotH = H - padT - padB;
+    const slot = plotW / n, gap = 2, barW = Math.max(1, slot - gap);
+    const y = v => padT + plotH - (v / topo) * plotH;
+    const rot = d => d.data.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    const maxRotulos = Math.max(2, Math.floor(plotW / 48));
+    const cada = Math.max(1, Math.ceil(n / maxRotulos));
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Faturamento por dia">`;
+    [0, 0.5, 1].forEach(f => {
+      const v = topo * f, yy = y(v);
+      svg += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="#ECE7DC" stroke-width="1"/>`;
+      svg += `<text x="${padL - 6}" y="${yy + 4}" text-anchor="end" font-size="10.5" fill="#6B7380">${brl(v).replace(',00','')}</text>`;
+    });
+    dias.forEach((d, i) => {
+      const x = padL + i * slot + gap / 2;
+      if(d.valor > 0){
+        const top = y(d.valor), h = padT + plotH - top, r = Math.min(4, barW / 2, h);
+        svg += `<path d="M${x},${padT + plotH} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${padT + plotH} Z" fill="#0D1B2A"/>`;
+      }
+      if(i % cada === 0 || (i === n - 1 && (n - 1) % cada >= cada * 0.7)){
+        svg += `<text x="${x + barW / 2}" y="${H - 6}" text-anchor="middle" font-size="10.5" fill="#6B7380">${rot(d)}</text>`;
+      }
+      // área de hover maior que a barra
+      svg += `<rect x="${padL + i * slot}" y="${padT}" width="${slot}" height="${plotH}" fill="transparent" data-i="${i}"/>`;
+    });
+    svg += `<line x1="${padL}" x2="${W - padR}" y1="${padT + plotH}" y2="${padT + plotH}" stroke="#CFC7B6" stroke-width="1"/></svg>`;
+    el.innerHTML = svg + '<div class="tip"></div>';
+
+    const tip = el.querySelector('.tip'), svgEl = el.querySelector('svg');
+    const mostrar = e => {
+      const i = e.target.dataset && e.target.dataset.i;
+      if(i === undefined){ tip.classList.remove('show'); return; }
+      const d = dias[i], box = svgEl.getBoundingClientRect(), esc2 = box.width / W;
+      tip.innerHTML = `<strong>${rot(d)}</strong> · ${brl(d.valor)} · ${d.pedidos} ${d.pedidos === 1 ? 'pedido' : 'pedidos'}`;
+      tip.style.left = Math.min(Math.max((padL + (+i + 0.5) * slot) * esc2, 70), box.width - 70) + 'px';
+      tip.style.top = (y(d.valor) * esc2 - 6) + 'px';
+      tip.classList.add('show');
+    };
+    svgEl.addEventListener('mousemove', mostrar);
+    svgEl.addEventListener('click', mostrar); // toque no celular
+    svgEl.addEventListener('mouseleave', () => tip.classList.remove('show'));
   }
 
   async function marcarEnviado(id, btn){
