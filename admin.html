@@ -22,7 +22,7 @@
   .btn:disabled{ opacity:.5; cursor:default; }
   .btn.outline{ background:transparent; color:#0D1B2A; border:1px solid #0D1B2A; }
   .btn.small{ padding:7px 10px; font-size:10px; letter-spacing:1px; }
-  .err{ color:#B3261E; font-size:12px; min-height:18px; margin-top:8px; }
+  .err{ color:#B3261E; font-size:13px; font-weight:600; min-height:18px; margin-top:8px; }
 
   .tabs{ display:flex; gap:6px; overflow-x:auto; margin-bottom:16px; padding-bottom:2px; }
   .tab{ flex:0 0 auto; background:#fff; border:1px solid #E2DCCF; padding:9px 12px; font-size:11px; letter-spacing:1px; cursor:pointer; font-family:inherit; font-weight:600; color:#0D1B2A; }
@@ -141,12 +141,19 @@
 
   $('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    senha = $('senha').value;
+    senha = $('senha').value.trim();
     $('loginErr').textContent = '';
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.textContent = 'ENTRANDO...';
     try{
       await carregar();
       try{ sessionStorage.setItem('pf_admin', senha); }catch(e){}
-    }catch(err){ $('loginErr').textContent = err.message; }
+    }catch(err){
+      $('loginErr').textContent = err.message === 'Senha incorreta.'
+        ? 'Senha incorreta. Confira a variável ADMIN_SENHA na Netlify (mínimo 8 caracteres).'
+        : err.message;
+    }
+    btn.disabled = false; btn.textContent = 'ENTRAR';
   });
 
   function sair(){
