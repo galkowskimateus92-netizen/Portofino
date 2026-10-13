@@ -146,7 +146,7 @@
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
               <span>ENTREGA</span><span class="pp-accordion-icon">+</span>
             </button>
-            <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250 (e sempre grátis para São Bento do Sul/SC). Trocas em até 7 dias após o recebimento.</p></div>
+            <div class="pp-accordion-body"><p>Frete grátis em compras acima de R$250. Trocas em até 7 dias após o recebimento.</p></div>
           </div>
           <div class="pp-accordion">
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
@@ -459,7 +459,7 @@
     },
     frete: {
       title: 'FRETE E ENTREGA',
-      body: `Enviamos para todo o Brasil pelos Correios. Frete grátis em compras acima de R$250 — e para São Bento do Sul/SC o frete é sempre grátis, em qualquer valor.
+      body: `Enviamos para todo o Brasil pelos Correios. Frete grátis em compras acima de R$250.
       <br><br>Prazo médio de envio: 2 a 5 dias úteis após a confirmação do pagamento, mais o prazo de transporte dos Correios até seu endereço.`
     },
     tamanhos: {
