@@ -4,7 +4,10 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-  { id:1, name:"Boné Portofino Azul Marinho", desc:"Algodão premium · âncora bordada", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A" },
+  { id:1, name:"Boné Portofino Azul Marinho", desc:"Brim premium · aba curva", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
+    // Texto e lista que aparecem em "DESCRIÇÃO" na página do produto (deixe [] vazio pra esconder a lista)
+    descricaoLonga: "Inspirado nas manhãs de Portofino: um boné azul-marinho de brim, feito pra acompanhar do café na praia ao fim de tarde na cidade.",
+    detalhes: ["Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"] },
 ];
 
   // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
@@ -14,9 +17,17 @@
 
   async function carregarEstoque(){
     try{
-      const { data, error } = await supabaseClient.from('produtos').select('id, estoque');
+      const { data, error } = await supabaseClient.from('produtos').select('*');
       if(error) throw error;
-      data.forEach(row => { estoquePorId[row.id] = row.estoque; });
+      data.forEach(row => {
+        estoquePorId[row.id] = row.estoque;
+        // O preço oficial fica no Supabase (é o mesmo que o servidor cobra).
+        // Se a coluna não existir ou estiver vazia, fica o preço escrito aqui no código.
+        const preco = Number(row.preco ?? row.price ?? row.valor);
+        const produto = products.find(p => p.id === Number(row.id));
+        if(produto && Number.isFinite(preco) && preco > 0) produto.price = preco;
+      });
+      atualizarPrecosDoCarrinho();
     }catch(err){
       console.error('Não foi possível carregar o estoque do Supabase:', err);
     }
@@ -40,6 +51,20 @@
     try{ localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); }catch(err){ /* segue sem salvar */ }
   }
   let cart = loadCart();
+
+  // Carrinhos salvos guardam o preço do dia em que o boné foi adicionado.
+  // Aqui eles são atualizados pro preço atual (e itens que não existem mais saem).
+  function atualizarPrecosDoCarrinho(redesenhar = true){
+    let mudou = false;
+    cart = cart.filter(i => {
+      const p = products.find(x => x.id === i.id);
+      if(!p){ mudou = true; return false; }
+      if(i.price !== p.price || i.name !== p.name){ i.price = p.price; i.name = p.name; mudou = true; }
+      return true;
+    });
+    if(mudou){ saveCart(); if(redesenhar) renderCart(); }
+  }
+  atualizarPrecosDoCarrinho(false); // o carrinho é desenhado no fim do arquivo
 
   function formatPrice(v){
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
@@ -134,13 +159,16 @@
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
               <span>DESCRIÇÃO</span><span class="pp-accordion-icon">+</span>
             </button>
-            <div class="pp-accordion-body"><p>${p.desc}</p></div>
+            <div class="pp-accordion-body">
+              <p>${p.descricaoLonga || p.desc}</p>
+              ${(p.detalhes || []).length ? `<ul class="pp-detalhes">${p.detalhes.map(d => `<li>${d}</li>`).join('')}</ul>` : ''}
+            </div>
           </div>
           <div class="pp-accordion">
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
               <span>TAMANHO</span><span class="pp-accordion-icon">+</span>
             </button>
-            <div class="pp-accordion-body"><p>Ajuste traseiro (strapback) — serve confortavelmente na maioria das cabeças adultas, perímetro aproximado de 55 a 60 cm.</p></div>
+            <div class="pp-accordion-body"><p>Ajuste traseiro com fivela de metal — serve confortavelmente na maioria das cabeças adultas, perímetro aproximado de 55 a 60 cm.</p></div>
           </div>
           <div class="pp-accordion">
             <button class="pp-accordion-head" onclick="toggleAccordion(this)">
@@ -464,7 +492,7 @@
     },
     tamanhos: {
       title: 'GUIA DE TAMANHOS',
-      body: `Nossos bonés têm ajuste traseiro (strapback), servindo confortavelmente na maioria das cabeças adultas — perímetro aproximado de 55 a 60 cm.
+      body: `Nossos bonés têm ajuste traseiro com fivela de metal, servindo confortavelmente na maioria das cabeças adultas — perímetro aproximado de 55 a 60 cm.
       <br><br>Dúvidas sobre um modelo específico? Manda um e-mail pra <a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a>.`
     }
   };
@@ -1138,7 +1166,7 @@
           external_reference: orderNumber,
           payer: payer,
           entrega: entrega || null,
-          cupom: cupomAtivo || null,
+          cupom: (percentualDesconto > 0 && cupomAtivo) ? cupomAtivo : null, // só manda o cupom se o desconto foi mostrado
           itensPedido: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price }))
         })
       });
@@ -1146,9 +1174,11 @@
       if(resp.ok && data.init_point){
         window.location.href = data.init_point; // leva o cliente pro checkout do Mercado Pago
       } else {
+        // Erros "de negócio" (sem estoque, cupom já usado, CEP inválido) vêm com uma mensagem clara do servidor
+        const motivo = typeof data.error === 'string' ? escHtml(data.error) : '';
         showModalMessage(`
           <h3>NÃO FOI POSSÍVEL INICIAR O PAGAMENTO</h3>
-          <p class="small">Tente novamente em instantes. Se o problema continuar, entre em contato com a loja.</p>
+          <p class="small">${motivo || 'Tente novamente em instantes. Se o problema continuar, entre em contato com a loja.'}</p>
         `);
         checkoutBtn.disabled = false;
         checkoutBtn.textContent = 'FINALIZAR COMPRA';

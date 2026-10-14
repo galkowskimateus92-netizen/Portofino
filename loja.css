@@ -371,3 +371,8 @@
     .foot-grid{ grid-template-columns:1fr; }
     .foot-bottom{ flex-direction:column; gap:14px; text-align:center; }
   }
+
+/* Lista de detalhes na DESCRIÇÃO do produto */
+.pp-detalhes{ margin:-6px 0 0; padding:0 0 18px; list-style:none; }
+.pp-detalhes li{ position:relative; padding-left:16px; font-size:13px; line-height:1.9; opacity:.85; }
+.pp-detalhes li::before{ content:''; position:absolute; left:2px; top:.8em; width:5px; height:5px; border-radius:50%; background:#B08A4E; }
