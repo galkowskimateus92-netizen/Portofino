@@ -1,16 +1,31 @@
 // Esta função roda no SERVIDOR da Netlify, nunca no navegador do cliente.
-// O Access Token fica guardado como variável de ambiente (MP_ACCESS_TOKEN),
-// configurada no painel da Netlify — nunca aparece no código nem no navegador.
+// O Access Token fica guardado como variável de ambiente (MP_ACCESS_TOKEN).
 //
-// Também consulta o Supabase (com a SERVICE ROLE KEY, só no servidor) para
-// garantir que o produto ainda tem estoque antes de gerar o link de pagamento.
+// SEGURANÇA: o valor cobrado é calculado AQUI, nunca com números vindos do navegador.
+//  - Preço de cada boné: tabela "produtos" do Supabase (coluna "preco").
+//  - Frete: recalculado aqui (Melhor Envio / entrega local / frete fixo).
+//  - Cupom: validado aqui (lista CUPONS + checagem de uso por e-mail).
+// O navegador só informa QUAIS produtos e QUANTOS, o CEP e o código do cupom.
 
 const { createClient } = require('@supabase/supabase-js');
+const { freteParaCobrar } = require('../lib/frete');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// Cupons válidos (mesma lista do site). Pra criar um novo, adicione aqui E no loja.js.
+const CUPONS = { RIVIERA10: 0.10 };
+
+const round2 = (v) => Math.round(v * 100) / 100;
+const resposta = (statusCode, obj) => ({ statusCode, body: JSON.stringify(obj) });
+
+// Lê o preço da linha do produto, aceitando os nomes de coluna mais comuns
+function precoDoProduto(row) {
+  const v = Number(row.preco ?? row.price ?? row.valor);
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
 
 // Descobre qual cliente está logado a partir do token enviado pelo site (se houver)
 async function usuarioLogado(event) {
@@ -21,12 +36,8 @@ async function usuarioLogado(event) {
   return error ? null : data.user;
 }
 
-async function registrarPedido({ event, external_reference, items, payer, entrega, cupom, itensPedido }) {
+async function registrarPedido({ event, external_reference, itens, total, payer, entrega, cupom }) {
   const user = await usuarioLogado(event);
-  const total = items.reduce((a, i) => a + Number(i.price) * Number(i.qty), 0);
-  const itens = Array.isArray(itensPedido) && itensPedido.length > 0
-    ? itensPedido.map((i) => ({ name: String(i.name), qty: Number(i.qty), price: Number(i.price) }))
-    : items.filter((i) => i.name !== 'Frete').map((i) => ({ name: String(i.name), qty: Number(i.qty), price: Number(i.price) }));
   const e = entrega && typeof entrega === 'object' ? entrega : {};
   const campo = (v) => String(v || '').slice(0, 200);
 
@@ -34,12 +45,12 @@ async function registrarPedido({ event, external_reference, items, payer, entreg
     user_id: user ? user.id : null,
     numero_pedido: String(external_reference),
     itens,
-    total: Math.round(total * 100) / 100,
+    total,
     status: 'pendente',
     email: payer?.email ? String(payer.email).trim().toLowerCase() : null,
     nome: payer?.name ? campo(payer.name) : null,
     telefone: e.telefone ? campo(e.telefone) : null,
-    cupom: cupom ? campo(cupom) : null,
+    cupom: cupom || null,
     entrega: {
       nome: campo(e.nome), cpf: campo(e.cpf), endereco: campo(e.endereco), bairro: campo(e.bairro),
       cidade: campo(e.cidade), uf: campo(e.uf), cep: campo(e.cep), prazo: campo(e.prazo),
@@ -54,60 +65,97 @@ exports.handler = async (event) => {
   }
 
   const accessToken = process.env.MP_ACCESS_TOKEN;
-  if (!accessToken) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'MP_ACCESS_TOKEN não configurado no servidor.' }),
-    };
-  }
+  if (!accessToken) return resposta(500, { error: 'MP_ACCESS_TOKEN não configurado no servidor.' });
 
   try {
-    const { items, external_reference, payer, entrega, cupom, itensPedido } = JSON.parse(event.body || '{}');
-    if (!Array.isArray(items) || items.length === 0) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Carrinho vazio.' }) };
+    const { items, external_reference, payer, entrega, cupom } = JSON.parse(event.body || '{}');
+
+    // 1) Junta o carrinho: só productId + quantidade (o preço enviado pelo navegador é ignorado)
+    const qtdPorProduto = new Map();
+    for (const i of Array.isArray(items) ? items : []) {
+      if (i.productId === undefined || i.productId === null) continue; // ex: linha "Frete"
+      const qty = Math.floor(Number(i.qty));
+      if (!Number.isFinite(qty) || qty < 1 || qty > 20) return resposta(400, { error: 'Quantidade inválida.' });
+      const id = Number(i.productId);
+      qtdPorProduto.set(id, (qtdPorProduto.get(id) || 0) + qty);
+    }
+    if (qtdPorProduto.size === 0) return resposta(400, { error: 'Carrinho vazio.' });
+
+    // 2) Busca preço, nome e estoque reais no Supabase
+    const { data: produtos, error: prodErr } = await supabase
+      .from('produtos')
+      .select('*')
+      .in('id', [...qtdPorProduto.keys()]);
+    if (prodErr) {
+      console.error('Erro ao consultar produtos no Supabase:', prodErr.message);
+      return resposta(500, { error: 'Não foi possível conferir os produtos agora. Tente de novo.' });
+    }
+    const produtoPorId = new Map(produtos.map((p) => [Number(p.id), p]));
+
+    const linhas = [];
+    const semEstoque = [];
+    for (const [id, qty] of qtdPorProduto) {
+      const p = produtoPorId.get(id);
+      const preco = p ? precoDoProduto(p) : null;
+      if (!p || preco === null) {
+        console.error(`Preço: produto ${id} sem preço válido no Supabase (coluna "preco").`);
+        return resposta(500, { error: 'Produto indisponível no momento. Fale com a loja.' });
+      }
+      if (Number(p.estoque) < qty) semEstoque.push(p.nome || `produto #${id}`);
+      linhas.push({ id, nome: p.nome || `Produto ${id}`, qty, preco });
+    }
+    if (semEstoque.length > 0) {
+      return resposta(409, { error: 'Sem estoque suficiente para: ' + semEstoque.join(', ') });
     }
 
-    // Só itens com productId entram na checagem de estoque (ex: "Frete" não tem productId e é ignorado)
-    const itensComProduto = items.filter((i) => i.productId !== undefined && i.productId !== null);
-
-    if (itensComProduto.length > 0) {
-      const productIds = itensComProduto.map((i) => i.productId);
-      const { data: produtos, error: estoqueError } = await supabase
-        .from('produtos')
-        .select('id, nome, estoque')
-        .in('id', productIds);
-
-      if (estoqueError) {
-        console.error('Erro ao consultar estoque no Supabase:', estoqueError.message);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Não foi possível checar o estoque.' }) };
+    // 3) Cupom: precisa existir e não pode ter sido usado antes por esse e-mail
+    const email = payer?.email ? String(payer.email).trim().toLowerCase() : '';
+    const codigoCupom = cupom ? String(cupom).trim().toUpperCase() : '';
+    let pctDesconto = 0;
+    if (codigoCupom) {
+      if (!CUPONS[codigoCupom]) return resposta(409, { error: `O cupom ${codigoCupom} não é válido. Remova o cupom e tente de novo.` });
+      if (!email) return resposta(400, { error: 'Informe seu e-mail pra usar o cupom.' });
+      const { data: usos, error: cupomErr } = await supabase
+        .from('cupons_usados')
+        .select('pedido_numero')
+        .eq('email', email)
+        .eq('codigo', codigoCupom);
+      if (cupomErr) {
+        console.error('Cupom: erro ao checar uso:', cupomErr.message);
+        return resposta(500, { error: 'Não foi possível validar o cupom agora. Tente de novo.' });
       }
-
-      const estoquePorId = new Map(produtos.map((p) => [p.id, p]));
-      const semEstoque = [];
-      for (const item of itensComProduto) {
-        const produto = estoquePorId.get(item.productId);
-        if (!produto || produto.estoque < Number(item.qty)) {
-          semEstoque.push(produto ? produto.nome : `produto #${item.productId}`);
-        }
-      }
-      if (semEstoque.length > 0) {
-        return {
-          statusCode: 409,
-          body: JSON.stringify({ error: 'Sem estoque suficiente para: ' + semEstoque.join(', ') }),
-        };
-      }
+      // O próprio site registra o uso deste pedido um pouco antes — esse não conta
+      const usadoAntes = (usos || []).some((u) => String(u.pedido_numero) !== String(external_reference));
+      if (usadoAntes) return resposta(409, { error: `O cupom ${codigoCupom} já foi usado com esse e-mail.` });
+      pctDesconto = CUPONS[codigoCupom];
     }
+
+    // 4) Frete recalculado aqui (sobre o subtotal sem desconto, igual ao site)
+    const subtotal = round2(linhas.reduce((a, l) => a + l.preco * l.qty, 0));
+    let frete;
+    try {
+      frete = (await freteParaCobrar(entrega?.cep, subtotal)).preco;
+    } catch (err) {
+      return resposta(400, { error: 'CEP inválido. Confira o endereço de entrega.' });
+    }
+    frete = round2(frete);
+
+    // 5) Monta os itens do Mercado Pago com os valores do servidor
+    const mpItems = linhas.map((l) => ({
+      id: String(l.id),
+      title: `Portofino — ${l.nome}`,
+      quantity: l.qty,
+      unit_price: round2(l.preco * (1 - pctDesconto)),
+      currency_id: 'BRL',
+    }));
+    if (frete > 0) {
+      mpItems.push({ title: 'Portofino — Frete', quantity: 1, unit_price: frete, currency_id: 'BRL' });
+    }
+    const total = round2(mpItems.reduce((a, i) => a + i.unit_price * i.quantity, 0));
 
     const siteUrl = process.env.URL || `https://${event.headers.host}`;
-
     const preferenceBody = {
-      items: items.map((i) => ({
-        ...(i.productId !== undefined && i.productId !== null ? { id: String(i.productId) } : {}),
-        title: `Portofino — ${i.name}`,
-        quantity: Number(i.qty),
-        unit_price: Number(i.price),
-        currency_id: 'BRL',
-      })),
+      items: mpItems,
       back_urls: {
         success: `${siteUrl}/success.html`,
         failure: `${siteUrl}/failure.html`,
@@ -115,25 +163,16 @@ exports.handler = async (event) => {
       },
       auto_return: 'approved',
     };
-
-    // Número do pedido (pra bater com o registro do formulário de entrega)
-    if (external_reference) {
-      preferenceBody.external_reference = external_reference;
-    }
-    // Nome/e-mail do comprador, se enviados
+    if (external_reference) preferenceBody.external_reference = String(external_reference);
     if (payer && (payer.name || payer.email)) {
-      preferenceBody.payer = {
-        name: payer.name || undefined,
-        email: payer.email || undefined,
-      };
+      preferenceBody.payer = { name: payer.name || undefined, email: payer.email || undefined };
     }
-    // Guarda o e-mail também em "metadata": o Mercado Pago às vezes não devolve
-    // o payer.email no pagamento final (ex: pagamentos como visitante), então isso
-    // garante que o webhook sempre consiga mandar o e-mail de confirmação certo.
+
+    // "metadata" volta no webhook: e-mail do comprador (o MP às vezes não devolve
+    // o payer.email) e endereço/prazo pro e-mail de confirmação completo.
     const metadata = {};
-    if (payer && payer.email) metadata.comprador_email = payer.email;
+    if (email) metadata.comprador_email = email;
     if (payer && payer.name) metadata.comprador_nome = String(payer.name).slice(0, 120);
-    // Endereço e prazo vão junto pro webhook poder montar o e-mail de confirmação completo
     if (entrega && typeof entrega === 'object') {
       const campo = (v) => String(v || '').slice(0, 200);
       metadata.entrega_endereco = campo(entrega.endereco);
@@ -147,37 +186,33 @@ exports.handler = async (event) => {
 
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(preferenceBody),
     });
-
     const data = await mpResponse.json();
-
     if (!mpResponse.ok) {
-      return {
-        statusCode: mpResponse.status,
-        body: JSON.stringify({ error: data }),
-      };
+      console.error('Mercado Pago recusou a preferência:', JSON.stringify(data));
+      return resposta(mpResponse.status, { error: 'Não foi possível iniciar o pagamento.' });
     }
 
-    // Registra o pedido no Supabase (todos os pedidos, logado ou visitante) — é daqui que
-    // saem o "Meus pedidos" do cliente e a página de admin. Se falhar, não trava a venda.
+    // Registra o pedido no Supabase (aparece no admin e no "Meus pedidos"). Se falhar, não trava a venda.
     if (external_reference) {
       try {
-        await registrarPedido({ event, external_reference, items, payer, entrega, cupom, itensPedido });
+        await registrarPedido({
+          event, external_reference, payer, entrega,
+          cupom: pctDesconto > 0 ? codigoCupom : null,
+          itens: linhas.map((l) => ({ name: l.nome, qty: l.qty, price: l.preco })),
+          total,
+        });
       } catch (err) {
         console.error('Pedidos: erro ao registrar pedido:', err.message);
       }
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ init_point: data.init_point }),
-    };
+    // Devolve o total real pro site conferir com o que mostrou ao cliente
+    return resposta(200, { init_point: data.init_point, total, frete });
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    console.error('create-preference:', err.message);
+    return resposta(500, { error: 'Erro ao iniciar o pagamento. Tente de novo.' });
   }
 };
