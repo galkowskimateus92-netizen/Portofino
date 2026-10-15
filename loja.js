@@ -33,6 +33,7 @@
     }
     if(document.getElementById('productGrid')) renderProducts();
     if(document.getElementById('productPage')) checkHashProduct();
+    if(typeof renderHomeProduct === 'function') renderHomeProduct(); // página inicial
   }
 
   function estoqueDe(id){

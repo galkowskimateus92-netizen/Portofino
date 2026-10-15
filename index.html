@@ -9,19 +9,21 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Portofino — Bonés Italian Riviera">
 <meta property="og:description" content="Bonés inspirados na Riviera Italiana. Brim premium, aba curva e design atemporal.">
-<meta property="og:image" content="https://portofinoco.com.br/portofino-hero-direita.jpg">
+<meta property="og:image" content="https://portofinoco.com.br/portofino-og.jpg">
 <meta property="og:url" content="https://portofinoco.com.br/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Portofino — Bonés Italian Riviera">
 <meta name="twitter:description" content="Bonés inspirados na Riviera Italiana. Brim premium, aba curva e design atemporal.">
-<meta name="twitter:image" content="https://portofinoco.com.br/portofino-hero-direita.jpg">
+<meta name="twitter:image" content="https://portofinoco.com.br/portofino-og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,500&family=Cinzel:wght@400;500;600&family=Montserrat:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Cinzel:wght@400;500;600&family=Montserrat:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="loja.css">
 <link rel="stylesheet" href="animations.css">
+<link rel="stylesheet" href="home.css">
+<link rel="preload" as="image" href="portofino-porto.jpg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body class="home">
 
 <!-- Formulário oculto para o Netlify Forms reconhecer e salvar os pedidos -->
 <form name="pedidos" data-netlify="true" netlify-honeypot="bot-field" hidden>
@@ -58,9 +60,12 @@
   <input name="bot-field-news" />
 </form>
 
-<div class="announce">FRETE GRÁTIS ACIMA DE R$ 250 · ENVIO PARA TODO O BRASIL</div>
+<div class="h-ticker" aria-label="Avisos"><div class="h-ticker-track">
+  <span>FRETE GRÁTIS ACIMA DE R$ 250</span><span>ENVIO PARA TODO O BRASIL</span><span>3X SEM JUROS</span><span>TROCA FÁCIL EM 7 DIAS</span>
+  <span aria-hidden="true">FRETE GRÁTIS ACIMA DE R$ 250</span><span aria-hidden="true">ENVIO PARA TODO O BRASIL</span><span aria-hidden="true">3X SEM JUROS</span><span aria-hidden="true">TROCA FÁCIL EM 7 DIAS</span>
+</div></div>
 
-<header>
+<header id="siteHeader">
   <div class="nav">
     <button class="icon-btn burger" onclick="toggleMobileMenu()" aria-label="Menu">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -90,109 +95,166 @@
   <div class="mobile-menu" id="mobileMenu">
     <a href="index.html" onclick="closeMobileMenu()">Início</a>
     <a href="colecao.html" onclick="closeMobileMenu()">Coleção</a>
-    <a href="#sobre" onclick="closeMobileMenu()">Sobre</a>
+    <a href="#historia" onclick="closeMobileMenu()">A história</a>
     <a href="#contato" onclick="closeMobileMenu()">Contato</a>
     <a href="#" onclick="closeMobileMenu(); openAccountModal(); return false;">Minha Conta</a>
   </div>
 </header>
 
-<section class="hero" id="hero">
-  <div class="hero-side left"></div>
-  <div class="hero-center">
-    <h1>PORTOFINO</h1>
-    <div class="sub">ITALIAN RIVIERA</div>
-    <p class="tag">Timeless places. Everyday style.</p>
-    <a href="colecao.html" class="btn">VER COLEÇÃO</a>
-  </div>
-  <div class="hero-side right"></div>
-</section>
-
-<section class="cat-hero">
-  <a class="cat-hero-panel" href="colecao.html">
-    <img class="cat-hero-bg" src="portofino-hero-direita.jpg" alt="Bonés Portofino">
-    <div class="cat-hero-overlay">
-      <div class="cat-hero-title">BONÉS</div>
-      <div class="cat-hero-link">EXPLORAR →</div>
+<!-- ABERTURA — foto: portofino-porto.jpg -->
+<section class="h-hero" id="hero">
+  <div class="h-hero-bg" role="img" aria-label="Porto de Portofino"></div>
+  <div class="h-wrap h-hero-inner">
+    <div class="h-eyebrow">Italian Riviera · Desde 2026</div>
+    <h1>O boné da<br><em>Riviera.</em></h1>
+    <p>Brim premium, aba curva e o espírito de Portofino — por <span class="h-price-inline">R$ 89,90</span>.</p>
+    <div class="h-hero-ctas">
+      <a class="h-btn h-btn-light" href="#produto">Comprar</a>
+      <a class="h-btn h-btn-ghost" href="#historia">A história</a>
     </div>
-  </a>
-</section>
-
-<section class="about" id="sobre" style="max-width:1180px; margin:0 auto; padding:70px 28px;">
-  <div class="about-art">
-    <img src="portofino-logo-pf.jpg" alt="Logo Portofino">
   </div>
-  <div class="about-text">
-    <div class="eyebrow">DESDE 2026</div>
-    <h2>FEITO PARA A RIVIERA.<br>PENSADO PARA O DIA A DIA.</h2>
-    <p>A Portofino traduz o espírito da Riviera em cada detalhe. Inspirada pelo Mediterrâneo, criada para quem valoriza estilo, qualidade e autenticidade.</p>
-    <p>Cada peça é pensada para acompanhar você em todos os momentos — com conforto, personalidade e um design atemporal.</p>
-    <div class="values">
-      <div class="value">ITALY</div>
-      <div class="value">FREEDOM</div>
-      <div class="value">ELEGANCE</div>
-      <div class="value">TIMELESS</div>
+  <div class="h-coords">44°18′N · 9°12′E · PORTOFINO</div>
+</section>
+<div class="h-stripes"></div>
+
+<!-- PRODUTO EM DESTAQUE (preço e estoque vêm do Supabase via loja.js) -->
+<section class="h-section" id="produto">
+  <div class="h-wrap h-feature">
+    <a class="h-photo" href="colecao.html#produto-1" data-reveal="left" aria-label="Ver detalhes do boné">
+      <!-- Quando tiver a foto do boné, troque este SVG por: <img src="bone-frente.jpg" alt="Boné Portofino Azul Marinho"> -->
+      <svg viewBox="0 0 300 200" aria-hidden="true">
+        <defs><linearGradient id="hCapG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1E3450"/><stop offset="1" stop-color="#0D1B2A"/></linearGradient></defs>
+        <path d="M60 120 C60 55 110 30 155 30 C205 30 245 60 248 118 Z" fill="url(#hCapG)"/>
+        <path d="M155 30 C150 60 148 95 150 120" stroke="#081420" stroke-width="2" fill="none" opacity=".6"/>
+        <path d="M100 42 C92 70 88 98 90 120" stroke="#081420" stroke-width="1.5" fill="none" opacity=".4"/>
+        <path d="M210 44 C218 72 220 98 218 120" stroke="#081420" stroke-width="1.5" fill="none" opacity=".4"/>
+        <circle cx="155" cy="30" r="5" fill="#0A1622"/>
+        <path d="M40 124 C90 108 210 108 290 132 C250 150 120 152 40 124 Z" fill="#081420"/>
+        <text x="155" y="92" text-anchor="middle" font-family="Cinzel, serif" font-size="13" letter-spacing="3" fill="#CDBA9A">PORTOFINO</text>
+      </svg>
+      <span class="h-photo-tag">Edição de lançamento</span>
+    </a>
+    <div class="h-info" data-reveal="right">
+      <div class="h-eyebrow">A peça</div>
+      <h2 id="hName">Boné Portofino<br>Azul Marinho</h2>
+      <div class="h-price"><b id="hPrice">R$ 89,90</b><small id="hInstall">3x de R$ 29,97 sem juros</small></div>
+      <div class="h-stock" id="hStock"></div>
+      <p class="h-lede">Inspirado nas manhãs de Portofino: do café na praia ao fim de tarde na cidade.</p>
+      <div class="h-chips"><span class="h-chip">Brim premium</span><span class="h-chip">Aba curva</span><span class="h-chip">Fivela de metal</span><span class="h-chip">Ajuste 55–60 cm</span></div>
+      <button class="h-btn h-btn-navy" id="hAddBtn" onclick="addToCart(1, this)">Adicionar ao carrinho</button>
+      <a class="h-more" href="colecao.html#produto-1">Ver detalhes do produto</a>
+      <div class="h-trust">
+        <div><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10"/><path d="M16 10h3l2 3v4h-5"/><circle cx="7" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Envio para<br>todo o Brasil</div>
+        <div><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>Pix, cartão<br>e boleto</div>
+        <div><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0114-5.3L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 01-14 5.3L4 15"/><path d="M4 20v-5h5"/></svg>Troca fácil<br>em 7 dias</div>
+      </div>
     </div>
-    <a href="colecao.html" class="btn outline" style="margin-top:30px; display:inline-block;">VER COLEÇÃO COMPLETA</a>
   </div>
 </section>
 
-<section class="newsletter" id="contato">
-  <div class="wrap">
+<!-- DETALHES -->
+<div class="h-details">
+  <div class="h-wrap h-details-grid">
+    <div data-reveal>
+      <svg viewBox="0 0 48 48"><path d="M6 14h36M6 22h36M6 30h36M6 38h36"/><path d="M10 10l28 32M18 10l20 23M10 18l20 24" opacity=".5"/></svg>
+      <h3>BRIM PREMIUM</h3><p>Firme, macio e feito pra durar</p>
+    </div>
+    <div data-reveal data-reveal-delay="1">
+      <svg viewBox="0 0 48 48"><path d="M6 30c8-10 28-10 36 0"/><path d="M14 30c0-10 4-18 10-18s10 8 10 18"/></svg>
+      <h3>ABA CURVA</h3><p>O caimento clássico</p>
+    </div>
+    <div data-reveal data-reveal-delay="2">
+      <svg viewBox="0 0 48 48"><rect x="10" y="17" width="28" height="14" rx="2"/><path d="M18 17v14M4 24h6M38 24h6"/></svg>
+      <h3>FIVELA DE METAL</h3><p>Ajuste de 55 a 60 cm</p>
+    </div>
+  </div>
+</div>
+<div class="h-stripes sea"></div>
+
+<!-- A ORIGEM — foto: portofino-vista.jpg -->
+<section class="h-section" id="historia">
+  <div class="h-wrap h-editorial">
+    <div class="h-ed-img" role="img" aria-label="Vista da baía de Portofino" data-reveal="left"></div>
+    <div data-reveal="right">
+      <div class="h-num">01</div>
+      <div class="h-eyebrow" style="margin-top:18px">A origem</div>
+      <h2>Feito para a Riviera.<br><em>Pensado para o dia a dia.</em></h2>
+      <p>A Portofino traduz o espírito da costa italiana em peças simples e bem-feitas — pra quem valoriza estilo, qualidade e conforto sem esforço.</p>
+      <p>Cada boné é pensado para acompanhar você em todos os momentos, com design atemporal.</p>
+      <div class="h-sig">— Portofino</div>
+    </div>
+  </div>
+</section>
+
+<!-- GALERIA "Na rua, na praia" — escondida até ter fotos do boné em uso.
+     Pra ativar: troque os nomes das imagens e apague o atributo "hidden". -->
+<section class="h-section" style="padding-top:0" hidden>
+  <div class="h-wrap">
+    <div class="h-look-head">
+      <h2>Na <em>rua</em>,<br>na praia.</h2>
+      <a class="h-more" href="colecao.html" style="margin:0">Ver coleção</a>
+    </div>
+    <div class="h-look">
+      <img src="look-praia.jpg" alt="Boné Portofino na praia" loading="lazy">
+      <img src="look-aba.jpg" alt="Detalhe da aba" loading="lazy">
+      <img src="look-cidade.jpg" alt="Boné Portofino na cidade" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- CITAÇÃO -->
+<section class="h-section h-quote">
+  <div class="h-wrap" data-reveal>
+    <blockquote>“Timeless places.<br>Everyday style.”</blockquote>
+    <cite>PORTOFINO · ITALIAN RIVIERA</cite>
+  </div>
+</section>
+
+<!-- INSTAGRAM -->
+<section class="h-section h-ig">
+  <div class="h-wrap" data-reveal>
+    <div class="h-eyebrow">Siga a gente</div>
+    <h2>@portofino.company</h2>
+    <a class="h-btn" href="https://instagram.com/portofino.company" target="_blank" rel="noopener">Ver no Instagram</a>
+  </div>
+</section>
+
+<!-- NEWSLETTER (mesmos IDs de antes: o loja.js salva no Netlify Forms) -->
+<section class="h-section h-news" id="contato">
+  <div class="h-wrap" data-reveal>
+    <div class="h-eyebrow">Lista Riviera</div>
     <h2>JUNTE-SE À RIVIERA</h2>
-    <p>Novidades, lançamentos e edições limitadas em primeira mão.</p>
-    <form class="news-form" id="newsletterForm">
-      <input type="email" name="email" id="newsletterEmail" placeholder="seu@email.com" required>
+    <p class="h-news-sub">Lançamentos e edições limitadas, em primeira mão.</p>
+    <form id="newsletterForm">
+      <input type="email" name="email" id="newsletterEmail" placeholder="seu@email.com" required aria-label="Seu e-mail">
       <button type="submit">INSCREVER</button>
     </form>
-    <p class="small" id="newsletterMsg" style="margin-top:10px; min-height:16px;"></p>
+    <p class="small" id="newsletterMsg" style="margin-top:12px; min-height:16px;"></p>
   </div>
 </section>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div>
-        <a class="logo" href="index.html" style="text-align:left; display:block;">
-          <div class="name" style="font-size:18px;">PORTOFINO</div>
-          <div class="sub">ITALIAN RIVIERA</div>
-        </a>
-        <p style="font-size:12px; opacity:0.65; margin-top:14px; line-height:1.7;">Bonés inspirados na costa italiana, feitos para durar.</p>
-      </div>
-      <div>
-        <h4>LOJA</h4>
-        <ul>
-          <li><a href="colecao.html">Coleção</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>AJUDA</h4>
-        <ul>
-          <li><a href="#" onclick="openInfoModal('trocas'); return false;">Trocas e Devoluções</a></li>
-          <li><a href="#" onclick="openInfoModal('frete'); return false;">Frete e Entrega</a></li>
-          <li><a href="#" onclick="openInfoModal('tamanhos'); return false;">Guia de Tamanhos</a></li>
-          <li><a href="privacidade.html">Política de Privacidade</a></li>
-          <li><a href="termos.html">Termos de Uso</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>CONTATO</h4>
-        <ul>
-          <li><a href="mailto:companyportofino@gmail.com">companyportofino@gmail.com</a></li>
-          <li><a href="https://instagram.com/portofino.company" target="_blank" rel="noopener">Instagram @portofino.company</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="foot-bottom">
-      <div style="display:flex; flex-direction:column; gap:4px;">
-        <span>© 2026 PORTOFINO — Todos os direitos reservados</span>
-        <span style="font-size:10.5px; opacity:0.8;">MARCO ANTONIO GALKOWSKI — CNPJ: 68.863.363/0001-94</span>
-      </div>
-      <div class="foot-pillars">
-        <span>ITALY</span><span>FREEDOM</span><span>ELEGANCE</span><span>TIMELESS</span>
-      </div>
-    </div>
+<footer class="h-footer">
+  <div class="h-wrap h-foot">
+    <nav>
+      <a href="colecao.html">Coleção</a>
+      <a href="#" onclick="openInfoModal('frete'); return false;">Frete e entrega</a>
+      <a href="#" onclick="openInfoModal('trocas'); return false;">Trocas</a>
+      <a href="#" onclick="openInfoModal('tamanhos'); return false;">Guia de tamanhos</a>
+      <a href="mailto:companyportofino@gmail.com">Contato</a>
+      <a href="https://instagram.com/portofino.company" target="_blank" rel="noopener">Instagram</a>
+    </nav>
+    <a class="logo" href="index.html"><div class="name">PORTOFINO</div><div class="sub">ITALIAN RIVIERA</div></a>
+    <div class="h-pay"><span>PIX</span><span>CARTÃO</span><span>BOLETO</span></div>
+    <div class="h-legal">© 2026 Portofino · Marco Antonio Galkowski — CNPJ 68.863.363/0001-94<br>
+      <a href="privacidade.html">Política de Privacidade</a> · <a href="termos.html">Termos de Uso</a></div>
   </div>
 </footer>
+
+<!-- Barra de compra fixa no celular (aparece depois da abertura) -->
+<div class="h-sticky" id="hSticky" aria-hidden="true">
+  <div><strong>BONÉ AZUL MARINHO</strong><span id="hStickyPrice">R$ 89,90 · 3x sem juros</span></div>
+  <a class="h-btn h-btn-navy" href="#produto">Comprar</a>
+</div>
 
 <!-- CART DRAWER -->
 <div class="overlay" id="overlay"></div>
@@ -225,6 +287,44 @@
 </div>
 
 <script src="loja.js"></script>
+<script>
+  // ===== Página inicial: produto em destaque, header e barra de compra =====
+  function renderHomeProduct(){
+    const p = products.find(x => x.id === 1);
+    if(!p) return;
+    const preco = formatPrice(p.price);
+    document.getElementById('hPrice').textContent = preco;
+    document.getElementById('hInstall').textContent = formatInstallment(p.price);
+    document.querySelectorAll('.h-price-inline').forEach(el => el.textContent = preco);
+    document.getElementById('hStickyPrice').textContent = `${preco} · 3x sem juros`;
+    const estoque = estoqueDe(p.id);
+    const btn = document.getElementById('hAddBtn');
+    const stock = document.getElementById('hStock');
+    if(estoque !== null && estoque <= 0){
+      btn.disabled = true; btn.textContent = 'ESGOTADO';
+      stock.textContent = 'Esgotado no momento';
+    } else {
+      btn.disabled = false;
+      stock.textContent = (estoque !== null && estoque <= 3) ? `Últimas ${estoque} unidades` : '';
+    }
+  }
+  renderHomeProduct();
+
+  (function(){
+    const header = document.getElementById('siteHeader');
+    const sticky = document.getElementById('hSticky');
+    const hero = document.getElementById('hero');
+    // Altura do header, pra foto da abertura ficar por baixo dele
+    function medirHeader(){ document.body.style.setProperty('--hh', header.offsetHeight + 'px'); }
+    medirHeader(); addEventListener('resize', medirHeader);
+    function aoRolar(){
+      const y = scrollY;
+      header.classList.toggle('scrolled', y > 40);
+      sticky.classList.toggle('show', y > hero.offsetHeight * .8);
+    }
+    aoRolar(); addEventListener('scroll', aoRolar, { passive:true });
+  })();
+</script>
 <script src="animations.js"></script>
 </body>
 </html>
