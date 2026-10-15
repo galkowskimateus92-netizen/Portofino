@@ -299,11 +299,25 @@
   }
 
   // ===== CUPOM DE DESCONTO =====
-  // Cupom único de boas-vindas: 10% de desconto, sem expiração e sem limite de uso por enquanto.
-  const CUPONS = { 'RIVIERA10': 0.10 };
+  // Cada cupom pode ser de 'percentual' (desconto nos produtos) ou 'frete' (frete grátis).
+  // Cada e-mail só pode usar cada cupom uma vez (conferido no Supabase e no servidor).
+  // Pra criar um novo, adicione aqui E em netlify/functions/create-preference.js.
+  const CUPONS = {
+    'RIVIERA10': { tipo: 'percentual', valor: 0.10 },
+    'FRETEAMIGO': { tipo: 'frete' }
+  };
   let cupomAtivo = null; // null ou o código em maiúsculas
   function percentualCupom(){
-    return cupomAtivo ? CUPONS[cupomAtivo] : 0;
+    const c = cupomAtivo ? CUPONS[cupomAtivo] : null;
+    return c && c.tipo === 'percentual' ? c.valor : 0;
+  }
+  function cupomFreteGratis(){
+    const c = cupomAtivo ? CUPONS[cupomAtivo] : null;
+    return !!(c && c.tipo === 'frete');
+  }
+  function textoCupomAplicado(codigo){
+    const c = CUPONS[codigo];
+    return c.tipo === 'frete' ? 'Cupom aplicado! Frete grátis.' : `Cupom aplicado! ${c.valor * 100}% de desconto.`;
   }
   function round2(v){ return Math.round(v * 100) / 100; }
 
@@ -339,7 +353,7 @@
     if(!codigo) return;
     if(CUPONS.hasOwnProperty(codigo)){
       cupomAtivo = codigo;
-      msg.textContent = `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
+      msg.textContent = textoCupomAplicado(codigo);
       msg.className = 'small';
       msg.style.color = '#2E7D32';
     } else {
@@ -364,7 +378,8 @@
     countEl.textContent = totalCount;
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const desconto = round2(subtotal * percentualCupom());
-    const frete = calcularFrete(subtotal); // régua de frete grátis usa o subtotal cheio, sem o cupom
+    // régua de frete grátis usa o subtotal cheio, sem o cupom; cupom de frete zera o frete
+    const frete = cupomFreteGratis() ? 0 : calcularFrete(subtotal);
     subtotalEl.textContent = formatPrice(subtotal);
     if(descontoRow){
       descontoRow.hidden = desconto <= 0;
@@ -871,16 +886,9 @@
   // Frete calculado em tempo real (via Melhor Envio) para o CEP digitado no checkout.
   // null enquanto não foi calculado ainda — nesse caso usamos o valor fixo como estimativa.
   let freteCalculado = null;
-  // true quando o CEP do checkout é de São Bento do Sul/SC (frete grátis na cidade da loja)
-  let entregaLocal = false;
-
-  function ehCidadeFreteGratis(cidade, uf){
-    const c = String(cidade || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-    return c === 'sao bento do sul' && String(uf || '').trim().toUpperCase() === 'SC';
-  }
-
-  function freteAtual(subtotal){
-    if(entregaLocal) return 0;
+  // ignorarCupom = true calcula o frete como se não houvesse cupom de frete grátis
+  function freteAtual(subtotal, ignorarCupom){
+    if(!ignorarCupom && cupomFreteGratis()) return 0;
     return freteCalculado ? freteCalculado.preco : calcularFrete(subtotal);
   }
 
@@ -891,8 +899,8 @@
     const desconto = round2(subtotal * percentualCupom());
     const frete = freteAtual(subtotal);
     let freteTexto;
-    if(entregaLocal){
-      freteTexto = 'Grátis (São Bento do Sul)';
+    if(cupomFreteGratis()){
+      freteTexto = 'Grátis (cupom)';
     } else if(freteCalculado){
       freteTexto = (frete === 0 ? 'Grátis' : `${formatPrice(frete)} (${freteCalculado.servico}, ${freteCalculado.prazoDias} dias úteis)`);
     } else {
@@ -910,7 +918,7 @@
     if(!codigo) return;
     if(CUPONS.hasOwnProperty(codigo)){
       cupomAtivo = codigo;
-      msg.textContent = `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
+      msg.textContent = textoCupomAplicado(codigo);
       msg.style.color = '#2E7D32';
     } else {
       cupomAtivo = null;
@@ -926,7 +934,6 @@
     if(cart.length === 0) return;
     document.getElementById('modalBox').classList.remove('modal-wide');
     freteCalculado = null;
-    entregaLocal = false;
     const p = currentProfile || {};
     modalContent.innerHTML = `
       <h3>DADOS PARA ENTREGA</h3>
@@ -979,7 +986,6 @@
     try{
       const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await resp.json();
-      if(!suffix) entregaLocal = !data.erro && ehCidadeFreteGratis(data.localidade, data.uf);
       if(!data.erro){
         document.getElementById(`endereco${suffix ? 'Input'+suffix : 'Input'}`).value = data.logradouro || '';
         document.getElementById(`bairro${suffix ? 'Input'+suffix : 'Input'}`).value = data.bairro || '';
@@ -1004,7 +1010,6 @@
       });
       if(!resp.ok) throw new Error('falha ao calcular frete');
       const data = await resp.json();
-      if(data.entregaLocal) entregaLocal = true;
       if(data.opcoes && data.opcoes.length > 0){
         const maisBarato = data.opcoes[0];
         freteCalculado = { preco: maisBarato.preco, servico: `${maisBarato.transportadora} ${maisBarato.servico}`, prazoDias: maisBarato.prazoDias };
@@ -1030,8 +1035,9 @@
     const payer = { name: fd.get('nome'), email: fd.get('email') };
     const itemsDesc = cart.map(i => `${i.qty}x ${i.name}`).join(', ');
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
-    const frete = freteAtual(subtotal);
+    let frete = freteAtual(subtotal);
     let percentualDesconto = percentualCupom();
+    let cupomEfetivo = cupomAtivo; // cupom que realmente vale nesse pedido (vira null se não der pra validar)
     const msgEl = document.getElementById('shippingMsg');
     if(msgEl) msgEl.textContent = '';
 
@@ -1054,14 +1060,16 @@
           return;
         }
       }catch(err){
-        // Se não der pra checar (Supabase fora do ar), segue sem aplicar o desconto por segurança
+        // Se não der pra checar (Supabase fora do ar), segue sem aplicar o cupom por segurança
         percentualDesconto = 0;
+        cupomEfetivo = null;
+        frete = freteAtual(subtotal, true);
       }
     }
     const desconto = round2(subtotal * percentualDesconto);
 
     // Marca esse cupom como usado por esse e-mail, pra não deixar aplicar de novo
-    if(cupomAtivo && percentualDesconto > 0){
+    if(cupomEfetivo){
       try{
         await supabaseClient.from('cupons_usados').insert({
           email: emailCliente, codigo: cupomAtivo, pedido_numero: orderNumber
@@ -1126,7 +1134,7 @@
       cep: fd.get('cep') || '',
       cpf: fd.get('cpf') || '',
       telefone: fd.get('telefone') || '',
-      prazo: entregaLocal ? 'Entrega local em São Bento do Sul' : (freteCalculado?.prazoDias ? `${freteCalculado.prazoDias} dias úteis após o envio` : ''),
+      prazo: freteCalculado?.prazoDias ? `${freteCalculado.prazoDias} dias úteis após o envio` : '',
     };
     try{
       localStorage.setItem('portofino_ultimo_pedido', JSON.stringify({
@@ -1141,10 +1149,10 @@
       }));
     }catch(err){ /* sem localStorage a página de sucesso só mostra a mensagem padrão */ }
 
-    startCheckout(orderNumber, payer, frete, percentualDesconto, entrega);
+    startCheckout(orderNumber, payer, frete, percentualDesconto, entrega, cupomEfetivo);
   }
 
-  async function startCheckout(orderNumber, payer, frete, percentualDesconto, entrega){
+  async function startCheckout(orderNumber, payer, frete, percentualDesconto, entrega, cupomEnviar){
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
     try{
@@ -1167,7 +1175,7 @@
           external_reference: orderNumber,
           payer: payer,
           entrega: entrega || null,
-          cupom: (percentualDesconto > 0 && cupomAtivo) ? cupomAtivo : null, // só manda o cupom se o desconto foi mostrado
+          cupom: cupomEnviar || null, // só manda o cupom se ele foi validado e mostrado ao cliente
           itensPedido: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price }))
         })
       });
