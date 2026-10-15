@@ -49,6 +49,8 @@ async function cotarFrete(cepDestino, subtotal) {
   const opcoes = await resp.json();
   const validas = (Array.isArray(opcoes) ? opcoes : [])
     .filter((o) => !o.error && o.price)
+    // A loja envia só pelos Correios (PAC/SEDEX): ignora Jadlog, Loggi etc.
+    .filter((o) => /correios/i.test(o.company?.name || ''))
     .map((o) => ({
       servico: o.name,
       transportadora: o.company?.name || '',
