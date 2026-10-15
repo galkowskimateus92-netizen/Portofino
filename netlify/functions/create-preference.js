@@ -3,7 +3,7 @@
 //
 // SEGURANÇA: o valor cobrado é calculado AQUI, nunca com números vindos do navegador.
 //  - Preço de cada boné: tabela "produtos" do Supabase (coluna "preco").
-//  - Frete: recalculado aqui (Melhor Envio / entrega local / frete fixo).
+//  - Frete: recalculado aqui (Melhor Envio / frete fixo; cupom de frete zera).
 //  - Cupom: validado aqui (lista CUPONS + checagem de uso por e-mail).
 // O navegador só informa QUAIS produtos e QUANTOS, o CEP e o código do cupom.
 
@@ -16,7 +16,11 @@ const supabase = createClient(
 );
 
 // Cupons válidos (mesma lista do site). Pra criar um novo, adicione aqui E no loja.js.
-const CUPONS = { RIVIERA10: 0.10 };
+// tipo 'percentual' = desconto nos produtos; tipo 'frete' = frete grátis.
+const CUPONS = {
+  RIVIERA10: { tipo: 'percentual', valor: 0.10 },
+  FRETEAMIGO: { tipo: 'frete' },
+};
 
 const round2 = (v) => Math.round(v * 100) / 100;
 const resposta = (statusCode, obj) => ({ statusCode, body: JSON.stringify(obj) });
@@ -112,6 +116,7 @@ exports.handler = async (event) => {
     const email = payer?.email ? String(payer.email).trim().toLowerCase() : '';
     const codigoCupom = cupom ? String(cupom).trim().toUpperCase() : '';
     let pctDesconto = 0;
+    let cupomFrete = false;
     if (codigoCupom) {
       if (!CUPONS[codigoCupom]) return resposta(409, { error: `O cupom ${codigoCupom} não é válido. Remova o cupom e tente de novo.` });
       if (!email) return resposta(400, { error: 'Informe seu e-mail pra usar o cupom.' });
@@ -127,10 +132,13 @@ exports.handler = async (event) => {
       // O próprio site registra o uso deste pedido um pouco antes — esse não conta
       const usadoAntes = (usos || []).some((u) => String(u.pedido_numero) !== String(external_reference));
       if (usadoAntes) return resposta(409, { error: `O cupom ${codigoCupom} já foi usado com esse e-mail.` });
-      pctDesconto = CUPONS[codigoCupom];
+      const def = CUPONS[codigoCupom];
+      if (def.tipo === 'percentual') pctDesconto = def.valor;
+      if (def.tipo === 'frete') cupomFrete = true;
     }
 
-    // 4) Frete recalculado aqui (sobre o subtotal sem desconto, igual ao site)
+    // 4) Frete recalculado aqui (sobre o subtotal sem desconto, igual ao site).
+    //    Cupom de frete grátis zera o frete, mas o CEP continua sendo validado.
     const subtotal = round2(linhas.reduce((a, l) => a + l.preco * l.qty, 0));
     let frete;
     try {
@@ -138,6 +146,7 @@ exports.handler = async (event) => {
     } catch (err) {
       return resposta(400, { error: 'CEP inválido. Confira o endereço de entrega.' });
     }
+    if (cupomFrete) frete = 0;
     frete = round2(frete);
 
     // 5) Monta os itens do Mercado Pago com os valores do servidor
@@ -200,7 +209,7 @@ exports.handler = async (event) => {
       try {
         await registrarPedido({
           event, external_reference, payer, entrega,
-          cupom: pctDesconto > 0 ? codigoCupom : null,
+          cupom: (pctDesconto > 0 || cupomFrete) ? codigoCupom : null,
           itens: linhas.map((l) => ({ name: l.nome, qty: l.qty, price: l.preco })),
           total,
         });
