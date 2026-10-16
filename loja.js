@@ -4,10 +4,10 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-  { id:1, name:"Boné Portofino Azul Marinho", desc:"Brim premium · aba curva", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
+  { id:1, name:"Boné Portofino Azul Marinho", desc:"Dad hat · brim premium · aba curva", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
     // Texto e lista que aparecem em "DESCRIÇÃO" na página do produto (deixe [] vazio pra esconder a lista)
-    descricaoLonga: "Inspirado nas manhãs de Portofino: um boné azul-marinho de brim, feito pra acompanhar do café na praia ao fim de tarde na cidade.",
-    detalhes: ["Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"],
+    descricaoLonga: "Inspirado nas manhãs de Portofino: um dad hat azul-marinho de brim, feito pra acompanhar do café na praia ao fim de tarde na cidade.",
+    detalhes: ["Modelo: dad hat", "Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"],
     // Fotos do produto — a primeira é a principal (aparece nos cards e no carrinho).
     // "src" é o caminho do arquivo na pasta img/, sem a extensão: o site usa
     // NOME.webp / NOME.jpg nas fotos grandes e NOME-thumb.webp / NOME-thumb.jpg nas miniaturas.
