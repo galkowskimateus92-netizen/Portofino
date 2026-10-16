@@ -478,7 +478,7 @@
       <div class="cart-item">
         ${cartThumb(i)}
         <div class="cart-item-info">
-          <h4>PORTOFINO ${i.name.toUpperCase()}</h4>
+          <h4>${/portofino/i.test(i.name) ? '' : 'PORTOFINO '}${i.name.toUpperCase()}</h4>
           <div class="p">${formatPrice(i.price)}</div>
           <div class="qty-row">
             <button onclick="changeQty(${i.id}, -1)">−</button>
