@@ -7,7 +7,19 @@
   { id:1, name:"Boné Portofino Azul Marinho", desc:"Brim premium · aba curva", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
     // Texto e lista que aparecem em "DESCRIÇÃO" na página do produto (deixe [] vazio pra esconder a lista)
     descricaoLonga: "Inspirado nas manhãs de Portofino: um boné azul-marinho de brim, feito pra acompanhar do café na praia ao fim de tarde na cidade.",
-    detalhes: ["Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"] },
+    detalhes: ["Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"],
+    // Fotos do produto — a primeira é a principal (aparece nos cards e no carrinho).
+    // "src" é o caminho do arquivo na pasta img/, sem a extensão: o site usa
+    // NOME.webp / NOME.jpg nas fotos grandes e NOME-thumb.webp / NOME-thumb.jpg nas miniaturas.
+    // Pra trocar a ordem ou tirar uma foto, é só mexer nesta lista.
+    fotos: [
+      { src:"img/boneazul-01-frontal",          w:1600, h:1066, alt:"Boné Portofino Azul Marinho, vista frontal" },
+      { src:"img/boneazul-02-frontal-vertical", w:1066, h:1600, alt:"Boné Portofino Azul Marinho, frente com a bandeira da Itália bordada" },
+      { src:"img/boneazul-03-angulo",           w:1600, h:1066, alt:"Boné Portofino Azul Marinho, de frente em leve ângulo" },
+      { src:"img/boneazul-04-lateral",          w:1600, h:1066, alt:"Boné Portofino Azul Marinho, vista lateral" },
+      { src:"img/boneazul-05-traseira",         w:1600, h:1067, alt:"Boné Portofino Azul Marinho, parte de trás com fivela de metal" },
+      { src:"img/boneazul-06-fecho",            w:1600, h:1066, alt:"Detalhe da fivela de metal do ajuste traseiro" },
+    ] },
 ];
 
   // Estoque de cada produto, carregado do Supabase. Enquanto não carrega,
@@ -86,6 +98,81 @@
     </div>`;
   }
 
+  // ===== Fotos do produto =====
+  // Uma foto em <picture>: WebP pra quem suporta (quase todo mundo) e JPG de reserva.
+  // opts: { thumb: usa a miniatura de 600px, eager: carrega na hora (senão carrega só quando aparece) }
+  function fotoPicture(f, opts){
+    opts = opts || {};
+    let w = f.w, h = f.h;
+    if(opts.thumb){
+      if(f.w >= f.h){ w = 600; h = Math.round(600 * f.h / f.w); }
+      else { h = 600; w = Math.round(600 * f.w / f.h); }
+    }
+    const base = f.src + (opts.thumb ? '-thumb' : '');
+    return `<picture>
+      <source type="image/webp" srcset="${base}.webp">
+      <img src="${base}.jpg" alt="${escapeHTML(f.alt || '')}" width="${w}" height="${h}" ${opts.eager ? '' : 'loading="lazy"'} decoding="async" draggable="false">
+    </picture>`;
+  }
+
+  // Visual do produto nos cards e no "Leve também": foto real se existir, senão o desenho antigo do boné
+  function capVisual(p, size){
+    if(p.fotos && p.fotos.length){
+      return `<div class="p-photo ${size <= 80 ? 'p-photo-sm' : ''}">${fotoPicture(p.fotos[0], { thumb:true })}</div>`;
+    }
+    return capSVG(p, size);
+  }
+
+  // Miniatura do item no carrinho
+  function cartThumb(item){
+    const prod = products.find(x => x.id === item.id);
+    if(prod && prod.fotos && prod.fotos.length){
+      return `<div class="cart-photo">${fotoPicture(prod.fotos[0], { thumb:true })}</div>`;
+    }
+    return `<div class="cart-cap-mini">
+          <div class="m-top" style="background:${item.color};"></div>
+          <div class="m-brim" style="background:${item.brim};"></div>
+        </div>`;
+  }
+
+  // Galeria da página do produto: foto grande + setas + miniaturas (clique, setas ou arrastar no celular)
+  let ppPhotoIndex = 0;
+  let ppTouchX = 0;
+  function galleryHTML(p){
+    if(!p.fotos || !p.fotos.length) return capSVG(p, 340);
+    ppPhotoIndex = 0;
+    const n = p.fotos.length;
+    return `<div class="pp-photos">
+      <div class="pp-main" ontouchstart="ppTouchX = event.changedTouches[0].clientX" ontouchend="ppSwipe(${p.id}, event)">
+        <div class="pp-main-img" id="ppMainImg">${fotoPicture(p.fotos[0], { eager:true })}</div>
+        ${n > 1 ? `
+        <button type="button" class="pp-arrow prev" onclick="stepPhoto(${p.id}, -1)" aria-label="Foto anterior">‹</button>
+        <button type="button" class="pp-arrow next" onclick="stepPhoto(${p.id}, 1)" aria-label="Próxima foto">›</button>
+        <span class="pp-counter" id="ppCounter">1 / ${n}</span>` : ''}
+      </div>
+      ${n > 1 ? `<div class="pp-thumbs">${p.fotos.map((f, i) => `
+        <button type="button" class="pp-thumb ${i === 0 ? 'active' : ''}" onclick="selectPhoto(${p.id}, ${i})" aria-label="Ver foto ${i + 1} de ${n}">${fotoPicture(f, { thumb:true, eager:true })}</button>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }
+
+  function selectPhoto(id, i){
+    const p = products.find(x => x.id === id);
+    if(!p || !p.fotos || !p.fotos.length) return;
+    const n = p.fotos.length;
+    ppPhotoIndex = ((i % n) + n) % n;
+    const main = document.getElementById('ppMainImg');
+    if(main) main.innerHTML = fotoPicture(p.fotos[ppPhotoIndex], { eager:true });
+    document.querySelectorAll('.pp-thumb').forEach((b, k) => b.classList.toggle('active', k === ppPhotoIndex));
+    const c = document.getElementById('ppCounter');
+    if(c) c.textContent = `${ppPhotoIndex + 1} / ${n}`;
+  }
+  function stepPhoto(id, dir){ selectPhoto(id, ppPhotoIndex + dir); }
+  function ppSwipe(id, e){
+    const dx = e.changedTouches[0].clientX - ppTouchX;
+    if(Math.abs(dx) > 40) stepPhoto(id, dx < 0 ? 1 : -1);
+  }
+
   let searchTerm = '';
 
   function renderProducts(){
@@ -106,7 +193,7 @@
       const estoqueBaixo = estoque !== null && estoque > 0 && estoque <= 3;
       return `
       <div class="card ${esgotado ? 'esgotado-card' : ''}" onclick="openProduct(${p.id})" style="cursor:pointer;">
-        ${capSVG(p, 150)}
+        ${capVisual(p, 150)}
         <h3>${p.name.toUpperCase()}</h3>
         <div class="desc">${p.desc}</div>
         <div class="price">${formatPrice(p.price)}</div>
@@ -131,7 +218,7 @@
     ppQty = 1;
 
     document.getElementById('productPageContent').innerHTML = `
-      <div class="pp-gallery">${capSVG(p, 340)}</div>
+      <div class="pp-gallery ${p.fotos && p.fotos.length ? 'has-photos' : ''}">${galleryHTML(p)}</div>
       <div class="pp-info">
         <h1>${p.name.toUpperCase()}</h1>
         <div class="stars-summary" id="starsSummary-${p.id}">Carregando avaliações…</div>
@@ -190,7 +277,7 @@
           <div class="pp-tambem-grid">
             ${outros.map(o => `
               <div class="pp-tambem-item" onclick="openProduct(${o.id})">
-                ${capSVG(o, 70)}
+                ${capVisual(o, 70)}
                 <div class="pp-tambem-name">${o.name.toUpperCase()}</div>
                 <div class="pp-tambem-price">${formatPrice(o.price)}</div>
               </div>
@@ -386,10 +473,7 @@
     }
     itemsEl.innerHTML = cart.map(i => `
       <div class="cart-item">
-        <div class="cart-cap-mini">
-          <div class="m-top" style="background:${i.color};"></div>
-          <div class="m-brim" style="background:${i.brim};"></div>
-        </div>
+        ${cartThumb(i)}
         <div class="cart-item-info">
           <h4>PORTOFINO ${i.name.toUpperCase()}</h4>
           <div class="p">${formatPrice(i.price)}</div>

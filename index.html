@@ -121,17 +121,11 @@
 <section class="h-section" id="produto">
   <div class="h-wrap h-feature">
     <a class="h-photo" href="colecao.html#produto-1" data-reveal="left" aria-label="Ver detalhes do boné">
-      <!-- Quando tiver a foto do boné, troque este SVG por: <img src="bone-frente.jpg" alt="Boné Portofino Azul Marinho"> -->
-      <svg viewBox="0 0 300 200" aria-hidden="true">
-        <defs><linearGradient id="hCapG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1E3450"/><stop offset="1" stop-color="#0D1B2A"/></linearGradient></defs>
-        <path d="M60 120 C60 55 110 30 155 30 C205 30 245 60 248 118 Z" fill="url(#hCapG)"/>
-        <path d="M155 30 C150 60 148 95 150 120" stroke="#081420" stroke-width="2" fill="none" opacity=".6"/>
-        <path d="M100 42 C92 70 88 98 90 120" stroke="#081420" stroke-width="1.5" fill="none" opacity=".4"/>
-        <path d="M210 44 C218 72 220 98 218 120" stroke="#081420" stroke-width="1.5" fill="none" opacity=".4"/>
-        <circle cx="155" cy="30" r="5" fill="#0A1622"/>
-        <path d="M40 124 C90 108 210 108 290 132 C250 150 120 152 40 124 Z" fill="#081420"/>
-        <text x="155" y="92" text-anchor="middle" font-family="Cinzel, serif" font-size="13" letter-spacing="3" fill="#CDBA9A">PORTOFINO</text>
-      </svg>
+      <!-- Foto principal do boné (vertical, enquadra bem no formato 4:5). Pra trocar, é só mudar o nome do arquivo na pasta img/ -->
+      <picture>
+        <source type="image/webp" srcset="img/boneazul-02-frontal-vertical.webp">
+        <img src="img/boneazul-02-frontal-vertical.jpg" alt="Boné Portofino Azul Marinho com a bandeira da Itália bordada" width="1066" height="1600" loading="lazy" decoding="async">
+      </picture>
       <span class="h-photo-tag">Edição de lançamento</span>
     </a>
     <div class="h-info" data-reveal="right">
