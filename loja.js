@@ -13,12 +13,10 @@
     // NOME.webp / NOME.jpg nas fotos grandes e NOME-thumb.webp / NOME-thumb.jpg nas miniaturas.
     // Pra trocar a ordem ou tirar uma foto, é só mexer nesta lista.
     fotos: [
-      { src:"img/boneazul-01-frontal",          w:1600, h:1066, alt:"Boné Portofino Azul Marinho, vista frontal" },
-      { src:"img/boneazul-02-frontal-vertical", w:1066, h:1600, alt:"Boné Portofino Azul Marinho, frente com a bandeira da Itália bordada" },
-      { src:"img/boneazul-03-angulo",           w:1600, h:1066, alt:"Boné Portofino Azul Marinho, de frente em leve ângulo" },
-      { src:"img/boneazul-04-lateral",          w:1600, h:1066, alt:"Boné Portofino Azul Marinho, vista lateral" },
-      { src:"img/boneazul-05-traseira",         w:1600, h:1067, alt:"Boné Portofino Azul Marinho, parte de trás com fivela de metal" },
-      { src:"img/boneazul-06-fecho",            w:1600, h:1066, alt:"Detalhe da fivela de metal do ajuste traseiro" },
+      { src:"img/boneazul-01-frontal",  w:1024, h:1536, alt:"Boné Portofino Azul Marinho, frente com a bandeira da Itália bordada" },
+      { src:"img/boneazul-02-angulo",   w:1536, h:1024, alt:"Boné Portofino Azul Marinho, de frente em ângulo, mostrando a aba curva" },
+      { src:"img/boneazul-03-traseira", w:1600, h:1067, alt:"Boné Portofino Azul Marinho, parte de trás com fivela de metal" },
+      { src:"img/boneazul-04-fecho",    w:1600, h:1066, alt:"Detalhe da fivela de metal do ajuste traseiro" },
     ] },
 ];
 
@@ -118,7 +116,8 @@
   // Visual do produto nos cards e no "Leve também": foto real se existir, senão o desenho antigo do boné
   function capVisual(p, size){
     if(p.fotos && p.fotos.length){
-      return `<div class="p-photo ${size <= 80 ? 'p-photo-sm' : ''}">${fotoPicture(p.fotos[0], { thumb:true })}</div>`;
+      const f = p.fotos[0];
+      return `<div class="p-photo ${f.h > f.w ? 'portrait' : ''} ${size <= 80 ? 'p-photo-sm' : ''}">${fotoPicture(f, { thumb:true })}</div>`;
     }
     return capSVG(p, size);
   }
@@ -144,7 +143,7 @@
     const n = p.fotos.length;
     return `<div class="pp-photos">
       <div class="pp-main" ontouchstart="ppTouchX = event.changedTouches[0].clientX" ontouchend="ppSwipe(${p.id}, event)">
-        <div class="pp-main-img" id="ppMainImg">${fotoPicture(p.fotos[0], { eager:true })}</div>
+        <div class="pp-main-img ${p.fotos[0].h > p.fotos[0].w ? 'portrait' : ''}" id="ppMainImg">${fotoPicture(p.fotos[0], { eager:true })}</div>
         ${n > 1 ? `
         <button type="button" class="pp-arrow prev" onclick="stepPhoto(${p.id}, -1)" aria-label="Foto anterior">‹</button>
         <button type="button" class="pp-arrow next" onclick="stepPhoto(${p.id}, 1)" aria-label="Próxima foto">›</button>
@@ -162,7 +161,11 @@
     const n = p.fotos.length;
     ppPhotoIndex = ((i % n) + n) % n;
     const main = document.getElementById('ppMainImg');
-    if(main) main.innerHTML = fotoPicture(p.fotos[ppPhotoIndex], { eager:true });
+    if(main){
+      const f = p.fotos[ppPhotoIndex];
+      main.classList.toggle('portrait', f.h > f.w);
+      main.innerHTML = fotoPicture(f, { eager:true });
+    }
     document.querySelectorAll('.pp-thumb').forEach((b, k) => b.classList.toggle('active', k === ppPhotoIndex));
     const c = document.getElementById('ppCounter');
     if(c) c.textContent = `${ppPhotoIndex + 1} / ${n}`;
