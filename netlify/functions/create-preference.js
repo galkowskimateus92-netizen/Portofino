@@ -17,6 +17,8 @@ const supabase = createClient(
 
 // Cupons válidos (mesma lista do site). Pra criar um novo, adicione aqui E no loja.js.
 const CUPONS = { RIVIERA10: 0.10 };
+// Cupons de frete grátis (1 uso por e-mail). Pra criar outro, adicione aqui E no loja.js.
+const CUPONS_FRETE = ['FRETEAMIGO'];
 
 const round2 = (v) => Math.round(v * 100) / 100;
 const resposta = (statusCode, obj) => ({ statusCode, body: JSON.stringify(obj) });
@@ -112,8 +114,9 @@ exports.handler = async (event) => {
     const email = payer?.email ? String(payer.email).trim().toLowerCase() : '';
     const codigoCupom = cupom ? String(cupom).trim().toUpperCase() : '';
     let pctDesconto = 0;
+    let freteGratisCupom = false;
     if (codigoCupom) {
-      if (!CUPONS[codigoCupom]) return resposta(409, { error: `O cupom ${codigoCupom} não é válido. Remova o cupom e tente de novo.` });
+      if (!CUPONS[codigoCupom] && !CUPONS_FRETE.includes(codigoCupom)) return resposta(409, { error: `O cupom ${codigoCupom} não é válido. Remova o cupom e tente de novo.` });
       if (!email) return resposta(400, { error: 'Informe seu e-mail pra usar o cupom.' });
       const { data: usos, error: cupomErr } = await supabase
         .from('cupons_usados')
@@ -127,18 +130,21 @@ exports.handler = async (event) => {
       // O próprio site registra o uso deste pedido um pouco antes — esse não conta
       const usadoAntes = (usos || []).some((u) => String(u.pedido_numero) !== String(external_reference));
       if (usadoAntes) return resposta(409, { error: `O cupom ${codigoCupom} já foi usado com esse e-mail.` });
-      pctDesconto = CUPONS[codigoCupom];
+      pctDesconto = CUPONS[codigoCupom] || 0;
+      freteGratisCupom = CUPONS_FRETE.includes(codigoCupom);
     }
+    const cupomAplicado = (pctDesconto > 0 || freteGratisCupom) ? codigoCupom : null;
 
     // 4) Frete recalculado aqui (sobre o subtotal sem desconto, igual ao site)
     const subtotal = round2(linhas.reduce((a, l) => a + l.preco * l.qty, 0));
     let frete;
     try {
+      // Mesmo com cupom de frete grátis, valida o CEP (o pedido precisa ter endereço válido)
       frete = (await freteParaCobrar(entrega?.cep, subtotal)).preco;
     } catch (err) {
       return resposta(400, { error: 'CEP inválido. Confira o endereço de entrega.' });
     }
-    frete = round2(frete);
+    frete = freteGratisCupom ? 0 : round2(frete);
 
     // 5) Monta os itens do Mercado Pago com os valores do servidor
     const mpItems = linhas.map((l) => ({
@@ -200,7 +206,7 @@ exports.handler = async (event) => {
       try {
         await registrarPedido({
           event, external_reference, payer, entrega,
-          cupom: pctDesconto > 0 ? codigoCupom : null,
+          cupom: cupomAplicado,
           itens: linhas.map((l) => ({ name: l.nome, qty: l.qty, price: l.preco })),
           total,
         });

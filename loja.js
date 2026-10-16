@@ -391,9 +391,22 @@
   // ===== CUPOM DE DESCONTO =====
   // Cupom único de boas-vindas: 10% de desconto, sem expiração e sem limite de uso por enquanto.
   const CUPONS = { 'RIVIERA10': 0.10 };
+  // Cupons de FRETE GRÁTIS (1 uso por e-mail). Pra criar outro, adicione aqui E no create-preference.js.
+  const CUPONS_FRETE = ['FRETEAMIGO'];
   let cupomAtivo = null; // null ou o código em maiúsculas
+  function cupomValido(codigo){
+    return CUPONS.hasOwnProperty(codigo) || CUPONS_FRETE.includes(codigo);
+  }
+  function cupomFreteGratis(){
+    return !!cupomAtivo && CUPONS_FRETE.includes(cupomAtivo);
+  }
   function percentualCupom(){
-    return cupomAtivo ? CUPONS[cupomAtivo] : 0;
+    return cupomAtivo ? (CUPONS[cupomAtivo] || 0) : 0;
+  }
+  function mensagemCupomAplicado(codigo){
+    return CUPONS_FRETE.includes(codigo)
+      ? 'Cupom aplicado! Frete grátis.'
+      : `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
   }
   function round2(v){ return Math.round(v * 100) / 100; }
 
@@ -427,9 +440,9 @@
     if(cupomAtivo){ removerCupom(); return; }
     const codigo = input.value.trim().toUpperCase();
     if(!codigo) return;
-    if(CUPONS.hasOwnProperty(codigo)){
+    if(cupomValido(codigo)){
       cupomAtivo = codigo;
-      msg.textContent = `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
+      msg.textContent = mensagemCupomAplicado(codigo);
       msg.className = 'small';
       msg.style.color = '#2E7D32';
     } else {
@@ -454,7 +467,7 @@
     countEl.textContent = totalCount;
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
     const desconto = round2(subtotal * percentualCupom());
-    const frete = calcularFrete(subtotal); // régua de frete grátis usa o subtotal cheio, sem o cupom
+    const frete = cupomFreteGratis() ? 0 : calcularFrete(subtotal); // régua de frete grátis usa o subtotal cheio, sem o cupom
     subtotalEl.textContent = formatPrice(subtotal);
     if(descontoRow){
       descontoRow.hidden = desconto <= 0;
@@ -966,8 +979,9 @@
     return c === 'sao bento do sul' && String(uf || '').trim().toUpperCase() === 'SC';
   }
 
-  function freteAtual(subtotal){
+  function freteAtual(subtotal, ignorarCupom){
     if(entregaLocal) return 0;
+    if(!ignorarCupom && cupomFreteGratis()) return 0;
     return freteCalculado ? freteCalculado.preco : calcularFrete(subtotal);
   }
 
@@ -980,6 +994,8 @@
     let freteTexto;
     if(entregaLocal){
       freteTexto = 'Grátis (São Bento do Sul)';
+    } else if(cupomFreteGratis()){
+      freteTexto = `Grátis (cupom ${cupomAtivo})`;
     } else if(freteCalculado){
       freteTexto = (frete === 0 ? 'Grátis' : `${formatPrice(frete)} (${freteCalculado.servico}, ${freteCalculado.prazoDias} dias úteis)`);
     } else {
@@ -995,9 +1011,9 @@
     if(cupomAtivo){ removerCupom(); return; }
     const codigo = input.value.trim().toUpperCase();
     if(!codigo) return;
-    if(CUPONS.hasOwnProperty(codigo)){
+    if(cupomValido(codigo)){
       cupomAtivo = codigo;
-      msg.textContent = `Cupom aplicado! ${CUPONS[codigo] * 100}% de desconto.`;
+      msg.textContent = mensagemCupomAplicado(codigo);
       msg.style.color = '#2E7D32';
     } else {
       cupomAtivo = null;
@@ -1117,8 +1133,9 @@
     const payer = { name: fd.get('nome'), email: fd.get('email') };
     const itemsDesc = cart.map(i => `${i.qty}x ${i.name}`).join(', ');
     const subtotal = cart.reduce((a,i)=>a+i.qty*i.price,0);
-    const frete = freteAtual(subtotal);
+    let frete = freteAtual(subtotal);
     let percentualDesconto = percentualCupom();
+    let cupomUsado = cupomAtivo || ''; // vira '' se não der pra confirmar o cupom
     const msgEl = document.getElementById('shippingMsg');
     if(msgEl) msgEl.textContent = '';
 
@@ -1143,12 +1160,14 @@
       }catch(err){
         // Se não der pra checar (Supabase fora do ar), segue sem aplicar o desconto por segurança
         percentualDesconto = 0;
+        cupomUsado = '';
+        frete = freteAtual(subtotal, true); // sem o cupom de frete grátis também
       }
     }
     const desconto = round2(subtotal * percentualDesconto);
 
     // Marca esse cupom como usado por esse e-mail, pra não deixar aplicar de novo
-    if(cupomAtivo && percentualDesconto > 0){
+    if(cupomUsado){
       try{
         await supabaseClient.from('cupons_usados').insert({
           email: emailCliente, codigo: cupomAtivo, pedido_numero: orderNumber
@@ -1172,7 +1191,7 @@
       cidade: fd.get('cidade'),
       estado: fd.get('estado'),
       itens: itemsDesc,
-      cupom: cupomAtivo || '',
+      cupom: cupomUsado,
       total: formatPrice(subtotal - desconto + frete)
     });
 
@@ -1221,17 +1240,17 @@
         itens: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
         subtotal, desconto, frete,
         total: subtotal - desconto + frete,
-        cupom: cupomAtivo || '',
+        cupom: cupomUsado,
         entrega,
         logado: !!currentUser,
         criadoEm: Date.now(),
       }));
     }catch(err){ /* sem localStorage a página de sucesso só mostra a mensagem padrão */ }
 
-    startCheckout(orderNumber, payer, frete, percentualDesconto, entrega);
+    startCheckout(orderNumber, payer, frete, percentualDesconto, entrega, cupomUsado);
   }
 
-  async function startCheckout(orderNumber, payer, frete, percentualDesconto, entrega){
+  async function startCheckout(orderNumber, payer, frete, percentualDesconto, entrega, cupomUsado){
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'PROCESSANDO...';
     try{
@@ -1254,7 +1273,7 @@
           external_reference: orderNumber,
           payer: payer,
           entrega: entrega || null,
-          cupom: (percentualDesconto > 0 && cupomAtivo) ? cupomAtivo : null, // só manda o cupom se o desconto foi mostrado
+          cupom: cupomUsado || null, // só manda o cupom se ele foi confirmado e mostrado ao cliente
           itensPedido: cart.map(i => ({ name:i.name, qty:i.qty, price:i.price }))
         })
       });

@@ -321,7 +321,9 @@
   /* MODAL */
   .modal-overlay{ position:fixed; inset:0; background:rgba(13,27,42,0.55); z-index:80; display:none; align-items:center; justify-content:center; padding:20px; }
   .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--cream); width:440px; max-width:100%; padding:36px 32px; border-radius:var(--radius); position:relative; }
+  .modal{ background:var(--cream); width:440px; max-width:100%; padding:36px 32px; border-radius:var(--radius); position:relative;
+    max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  @media(max-width:560px){ .modal{ padding:28px 20px; } }
   .modal.modal-wide{ width:780px; }
   .modal h3{ font-family:'Cinzel',serif; letter-spacing:2px; font-size:19px; margin-bottom:6px; text-align:center; }
   .modal p.small{ text-align:center; font-size:12px; opacity:0.6; margin-bottom:24px; }
