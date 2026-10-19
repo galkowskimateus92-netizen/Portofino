@@ -4,7 +4,7 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-  { id:1, name:"Boné Portofino Azul Marinho", desc:"Dad hat · brim premium · aba curva", price:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
+  { id:1, name:"Boné Portofino Azul Marinho", desc:"Dad hat · brim premium · aba curva", price:74.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
     // Texto e lista que aparecem em "DESCRIÇÃO" na página do produto (deixe [] vazio pra esconder a lista)
     descricaoLonga: "Inspirado nas manhãs de Portofino: um dad hat azul-marinho de brim, feito pra acompanhar do café na praia ao fim de tarde na cidade.",
     detalhes: ["Modelo: dad hat", "Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"],
