@@ -473,8 +473,11 @@
       descontoRow.hidden = desconto <= 0;
       if(descontoEl) descontoEl.textContent = `-${formatPrice(desconto)}`;
     }
-    freteEl.textContent = frete === 0 ? 'Grátis' : formatPrice(frete);
-    totalEl.textContent = formatPrice(subtotal - desconto + frete);
+    // No carrinho o CEP ainda não é conhecido: só mostra "Grátis" quando já vale (acima de R$250 ou cupom);
+    // senão avisa que o frete é calculado no checkout e o total não soma o frete.
+    const freteGratisNoCarrinho = frete === 0;
+    freteEl.textContent = freteGratisNoCarrinho ? 'Grátis' : 'Calculado no checkout';
+    totalEl.textContent = formatPrice(subtotal - desconto);
 
     // Qualquer mudança no carrinho invalida um checkout que ficou "travado" em processamento
     // (ex: a pessoa mexeu no carrinho de novo antes do pagamento carregar).
