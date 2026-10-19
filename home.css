@@ -166,3 +166,6 @@
   .home .h-hero-bg{ animation:none; transform:none; }
   .home .h-ticker-track{ animation:none; }
 }
+
+/* Preço promocional: valor antigo riscado */
+.home .preco-de{ font-weight:400; font-size:0.5em; opacity:.5; text-decoration:line-through; margin-right:6px; }

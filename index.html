@@ -107,7 +107,7 @@
   <div class="h-wrap h-hero-inner">
     <div class="h-eyebrow">Italian Riviera · Desde 2026</div>
     <h1>O boné da<br><em>Riviera.</em></h1>
-    <p>Dad hat de brim premium, aba curva e o espírito de Portofino — por <span class="h-price-inline">R$ 69,90</span>.</p>
+    <p>Dad hat de brim premium, aba curva e o espírito de Portofino — por <span class="h-price-inline"><s class="preco-de">R$ 89,90</s> R$ 69,90</span>.</p>
     <div class="h-hero-ctas">
       <a class="h-btn h-btn-light" href="#produto">Comprar</a>
       <a class="h-btn h-btn-ghost" href="#historia">A história</a>
@@ -131,7 +131,7 @@
     <div class="h-info" data-reveal="right">
       <div class="h-eyebrow">A peça</div>
       <h2 id="hName">Boné Portofino<br>Azul Marinho</h2>
-      <div class="h-price"><b id="hPrice">R$ 69,90</b><small id="hInstall">3x de R$ 23,30 sem juros</small></div>
+      <div class="h-price"><b id="hPrice"><s class="preco-de">R$ 89,90</s> R$ 69,90</b><small id="hInstall">3x de R$ 23,30 sem juros</small></div>
       <div class="h-stock" id="hStock"></div>
       <p class="h-lede">Inspirado nas manhãs de Portofino: do café na praia ao fim de tarde na cidade.</p>
       <div class="h-chips"><span class="h-chip">Dad hat</span><span class="h-chip">Brim premium</span><span class="h-chip">Aba curva</span><span class="h-chip">Fivela de metal</span><span class="h-chip">Ajuste 55–60 cm</span></div>
@@ -246,7 +246,7 @@
 
 <!-- Barra de compra fixa no celular (aparece depois da abertura) -->
 <div class="h-sticky" id="hSticky" aria-hidden="true">
-  <div><strong>BONÉ AZUL MARINHO</strong><span id="hStickyPrice">R$ 69,90 · 3x sem juros</span></div>
+  <div><strong>BONÉ AZUL MARINHO</strong><span id="hStickyPrice"><s class="preco-de">R$ 89,90</s> R$ 69,90 · 3x sem juros</span></div>
   <a class="h-btn h-btn-navy" href="#produto">Comprar</a>
 </div>
 
@@ -287,10 +287,10 @@
     const p = products.find(x => x.id === 1);
     if(!p) return;
     const preco = formatPrice(p.price);
-    document.getElementById('hPrice').textContent = preco;
+    document.getElementById('hPrice').innerHTML = precoHtml(p);
     document.getElementById('hInstall').textContent = formatInstallment(p.price);
-    document.querySelectorAll('.h-price-inline').forEach(el => el.textContent = preco);
-    document.getElementById('hStickyPrice').textContent = `${preco} · 3x sem juros`;
+    document.querySelectorAll('.h-price-inline').forEach(el => el.innerHTML = precoHtml(p));
+    document.getElementById('hStickyPrice').innerHTML = `${precoHtml(p)} · 3x sem juros`;
     const estoque = estoqueDe(p.id);
     const btn = document.getElementById('hAddBtn');
     const stock = document.getElementById('hStock');

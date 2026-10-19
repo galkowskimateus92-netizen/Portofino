@@ -4,7 +4,7 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const products = [
-  { id:1, name:"Boné Portofino Azul Marinho", desc:"Dad hat · brim premium · aba curva", price:69.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
+  { id:1, name:"Boné Portofino Azul Marinho", desc:"Dad hat · brim premium · aba curva", price:69.90, precoDe:89.90, color:"#0D1B2A", brim:"#081420", patch:"#CDBA9A",
     // Texto e lista que aparecem em "DESCRIÇÃO" na página do produto (deixe [] vazio pra esconder a lista)
     descricaoLonga: "Inspirado nas manhãs de Portofino: um dad hat azul-marinho de brim, feito pra acompanhar do café na praia ao fim de tarde na cidade.",
     detalhes: ["Modelo: dad hat", "Tecido: brim", "Aba curva", "Ajuste traseiro com fivela de metal"],
@@ -79,6 +79,12 @@
 
   function formatPrice(v){
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  }
+
+  // Preço promocional: mostra o "de" riscado antes do preço atual (se o produto tiver precoDe maior).
+  function precoHtml(p){
+    const atual = formatPrice(p.price);
+    return p.precoDe && p.precoDe > p.price ? `<s class="preco-de">${formatPrice(p.precoDe)}</s> ${atual}` : atual;
   }
 
   function formatInstallment(price){
@@ -199,7 +205,7 @@
         ${capVisual(p, 150)}
         <h3>${p.name.toUpperCase()}</h3>
         <div class="desc">${p.desc}</div>
-        <div class="price">${formatPrice(p.price)}</div>
+        <div class="price">${precoHtml(p)}</div>
         <div class="installment">${formatInstallment(p.price)}</div>
         ${estoqueBaixo ? `<div class="stock-warn">Últimas ${estoque} unidades</div>` : ''}
         <button class="add-btn ${esgotado ? 'esgotado' : ''}" ${esgotado ? 'disabled' : ''} onclick="event.stopPropagation(); addToCart(${p.id}, this)">${esgotado ? 'ESGOTADO' : 'ADICIONAR AO CARRINHO'}</button>
@@ -225,7 +231,7 @@
       <div class="pp-info">
         <h1>${p.name.toUpperCase()}</h1>
         <div class="stars-summary" id="starsSummary-${p.id}">Carregando avaliações…</div>
-        <div class="pp-price">${formatPrice(p.price)}</div>
+        <div class="pp-price">${precoHtml(p)}</div>
         <div class="installment" style="margin-bottom:14px;">${formatInstallment(p.price)}</div>
         ${esgotado
           ? `<div class="stock-warn" style="margin-bottom:14px;">Produto esgotado no momento</div>`

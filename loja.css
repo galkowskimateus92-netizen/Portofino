@@ -424,3 +424,6 @@
 .cart-photo{ width:56px; height:70px; flex-shrink:0; border-radius:2px; overflow:hidden; background:#F6F6F5; }
 .cart-photo picture, .cart-photo img{ display:block; width:100%; height:100%; }
 .cart-photo img{ object-fit:cover; }
+
+/* Preço promocional: valor antigo riscado */
+.preco-de{ font-weight:400; font-size:0.72em; opacity:.5; text-decoration:line-through; margin-right:6px; }
