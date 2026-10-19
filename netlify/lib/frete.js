@@ -76,6 +76,8 @@ async function cotarFrete(cepDestino, subtotal) {
   const opcoes = await resp.json();
   const validas = (Array.isArray(opcoes) ? opcoes : [])
     .filter((o) => !o.error && o.price)
+    // Só Correios, apenas PAC e SEDEX (sem Jadlog, Loggi, Mini Envios etc.).
+    .filter((o) => /correios/i.test(o.company?.name || '') && /^(pac|sedex)$/i.test(String(o.name || '').trim()))
     .map((o) => ({
       servico: o.name,
       transportadora: o.company?.name || '',
